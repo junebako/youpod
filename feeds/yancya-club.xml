@@ -14,7 +14,7 @@
       Podcast for Node
     </generator>
     <lastBuildDate>
-      Sun, 09 Mar 2025 07:03:24 GMT
+      Sun, 09 Mar 2025 07:08:52 GMT
     </lastBuildDate>
     <atom:link href="https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/feed.xml" rel="self" type="application/rss+xml"/>
     <author>
@@ -68,7 +68,7 @@
       <pubDate>
         Sat, 08 Mar 2025 12:21:46 GMT
       </pubDate>
-      <enclosure url="他人にボトルを任せるな-I31Alz-5SmA.mp4" length="35750935" type="video/mp4"/>
+      <enclosure url="I31Alz-5SmA.mp4" length="35750935" type="video/mp4"/>
       <itunes:summary>
         他人にボトルを任せるな
       </itunes:summary>
@@ -95,9 +95,36 @@
       <pubDate>
         Fri, 07 Mar 2025 08:17:01 GMT
       </pubDate>
-      <enclosure url="やらないとやらんと-jDpFZzFLnds.mp4" length="27248465" type="video/mp4"/>
+      <enclosure url="jDpFZzFLnds.mp4" length="27248465" type="video/mp4"/>
       <itunes:summary>
         やらないとやらんと
+      </itunes:summary>
+      <itunes:explicit>
+        false
+      </itunes:explicit>
+    </item>
+    <item>
+      <title>
+        <![CDATA[繰り上がり昇格すごい]]>
+      </title>
+      <description>
+        <![CDATA[繰り上がり昇格すごい]]>
+      </description>
+      <link>
+        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/jkQHll4QN10
+      </link>
+      <guid isPermaLink="false">
+        jkQHll4QN10
+      </guid>
+      <dc:creator>
+        <![CDATA[やんちゃクラブ]]>
+      </dc:creator>
+      <pubDate>
+        Thu, 06 Mar 2025 19:03:44 GMT
+      </pubDate>
+      <enclosure url="jkQHll4QN10.mp4" length="32576264" type="video/mp4"/>
+      <itunes:summary>
+        繰り上がり昇格すごい
       </itunes:summary>
       <itunes:explicit>
         false

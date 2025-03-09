@@ -130,8 +130,9 @@ export class FeedGenerator {
     
     // 各エントリをフィードに追加
     for (const entry of limitedEntries) {
-      const fileUrl = path.basename(entry.filePath);
-      const fileExt = path.extname(entry.filePath).substring(1); // 先頭の.を除去
+      // ファイル名は動画IDだけを使用
+      const fileExt = entry.format === 'mp3' ? 'mp3' : 'mp4';
+      const fileUrl = `${entry.videoId}.${fileExt}`;
       
       feed.addItem({
         title: entry.title,
