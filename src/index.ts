@@ -18,39 +18,47 @@ interface AppOptions {
   feedOptions?: FeedOptions;
   upload?: boolean;
   uploadFeedOnly?: boolean;
+  uploadOnly?: boolean;
 }
 
 async function main() {
   try {
-    // コマンドライン引数を解析
-    const options = parseCommandLineArgs();
-
-    // 履歴マネージャーを初期化
-    const historyManager = new HistoryManager();
-
     // 設定ファイルを読み込む
     const config = await loadConfig();
     console.log(`${config.channels.length}個のチャンネルが設定されています`);
-
+    
+    // コマンドライン引数を解析
+    const options = parseCommandLineArgs();
+    
+    // アップロードのみの場合は、ダウンロードとフィード生成をスキップ
+    if (options.uploadOnly) {
+      options.skipDownload = true;
+      options.skipFeedGeneration = true;
+      options.upload = true;
+    }
+    
     // チャンネルアイコンを取得
     await fetchChannelIcons(config.channels);
+    
+    // ヒストリーマネージャーを初期化
+    const historyManager = new HistoryManager();
+    
+    // ダウンロードをスキップしない場合
+    if (!options.skipDownload && !options.uploadFeedOnly && !options.uploadOnly) {
+      // 出力ディレクトリを作成
+      const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
+      await fs.ensureDir(outputBaseDir);
 
-    // 出力ディレクトリを作成
-    const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
-    await fs.ensureDir(outputBaseDir);
+      // 処理するチャンネルをフィルタリング
+      const channelsToProcess = options.channelLabel 
+        ? config.channels.filter(channel => channel.label === options.channelLabel)
+        : config.channels;
 
-    // 処理するチャンネルをフィルタリング
-    const channelsToProcess = options.channelLabel 
-      ? config.channels.filter(channel => channel.label === options.channelLabel)
-      : config.channels;
+      if (options.channelLabel && channelsToProcess.length === 0) {
+        console.warn(`警告: 指定されたチャンネル "${options.channelLabel}" が見つかりませんでした`);
+        return;
+      }
 
-    if (options.channelLabel && channelsToProcess.length === 0) {
-      console.warn(`警告: 指定されたチャンネル "${options.channelLabel}" が見つかりませんでした`);
-      return;
-    }
-
-    // ダウンロード処理をスキップしない場合
-    if (!options.skipDownload) {
       // 各チャンネルを処理
       for (const channel of channelsToProcess) {
         console.log(`\n===== チャンネル: ${channel.label} =====`);
@@ -112,7 +120,7 @@ async function main() {
     }
 
     // フィード生成をスキップしない場合
-    if (!options.skipFeedGeneration) {
+    if (!options.skipFeedGeneration && !options.uploadOnly) {
       console.log('\n===== RSSフィードを生成 =====');
       
       // フィードディレクトリを作成
@@ -172,7 +180,7 @@ async function main() {
     }
     
     // アップロード処理
-    if (options.upload || options.uploadFeedOnly) {
+    if (options.upload || options.uploadFeedOnly || options.uploadOnly) {
       await uploadToR2(config, options);
     }
     
@@ -401,25 +409,22 @@ function parseCommandLineArgs(): AppOptions {
   const options: AppOptions = {
     maxVideos: 10,
     format: 'mp4',
+    outputDir: path.join(process.cwd(), 'downloads'),
     skipDownload: false,
     skipFeedGeneration: false,
     upload: false,
-    uploadFeedOnly: false
+    uploadFeedOnly: false,
+    uploadOnly: false
   };
   
   for (let i = 2; i < process.argv.length; i++) {
     const arg = process.argv[i];
     
     if (arg === '--max' || arg === '-m') {
-      const value = parseInt(process.argv[++i], 10);
-      if (!isNaN(value)) {
-        options.maxVideos = value;
-      }
+      options.maxVideos = parseInt(process.argv[++i], 10);
     } else if (arg === '--format' || arg === '-f') {
-      const value = process.argv[++i];
-      if (value === 'mp3' || value === 'mp4') {
-        options.format = value;
-      }
+      const format = process.argv[++i];
+      options.format = (format === 'mp3' || format === 'mp4') ? format : 'mp4';
     } else if (arg === '--output' || arg === '-o') {
       options.outputDir = process.argv[++i];
     } else if (arg === '--channel' || arg === '-c') {
@@ -435,7 +440,8 @@ function parseCommandLineArgs(): AppOptions {
       options.upload = true;
     } else if (arg === '--upload-feed') {
       options.uploadFeedOnly = true;
-      options.skipDownload = true;
+    } else if (arg === '--upload-only') {
+      options.uploadOnly = true;
     }
   }
   

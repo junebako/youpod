@@ -16,7 +16,8 @@
     "feed": "ts-node src/index.ts --feed-only",
     "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ",
     "upload": "ts-node src/index.ts --upload",
-    "upload:feed": "ts-node src/index.ts --upload-feed"
+    "upload:feed": "ts-node src/index.ts --upload-feed",
+    "upload:only": "ts-node src/index.ts --upload-only"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
