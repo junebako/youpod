@@ -53,30 +53,86 @@ export async function downloadVideo(
   
   try {
     // yt-dlpコマンドを構築
-    let command = `yt-dlp "${videoUrl}" -o "${filePath}"`;
+    let command = '';
     
     if (format === 'mp3') {
-      command += ' -x --audio-format mp3 --audio-quality 0';
-    } else {
-      command += ` -f ${quality}`;
+      // 音声のみを抽出してmp3形式で保存
+      command = `yt-dlp "${videoUrl}" -o "${filePath}" -x --audio-format mp3 --audio-quality 0`;
+    } else if (format === 'mp4') {
+      // 動画をmp4形式で保存（シンプルな方法）
+      // 一時ファイル名を作成（拡張子なし）
+      const tempFilePath = path.join(outputDir, `${safeTitle}-${videoId}`);
+      
+      // mp4形式で直接ダウンロード（より単純なオプション）
+      command = `yt-dlp "${videoUrl}" -o "${tempFilePath}.%(ext)s" -f "best[ext=mp4]/best" --recode-video mp4`;
     }
     
     // 追加オプション
     command += ' --no-check-certificate --no-warnings';
     
+    console.log(`実行コマンド: ${command}`);
+    
     // コマンドを実行
-    await execAsync(command);
+    const { stdout, stderr } = await execAsync(command);
     
-    console.log(`ダウンロード完了: ${fileName}`);
+    if (stderr) {
+      console.error(`コマンド実行中のエラー: ${stderr}`);
+    }
     
-    const stats = await fs.stat(filePath);
-    return {
-      videoId,
-      title: videoEntry.title,
-      filePath,
-      fileSize: stats.size,
-      format
-    };
+    if (stdout) {
+      console.log(`コマンド出力: ${stdout.substring(0, 200)}...`);
+    }
+    
+    // ファイルが存在するか確認
+    if (await fs.pathExists(filePath)) {
+      console.log(`ダウンロード完了: ${fileName}`);
+      
+      const stats = await fs.stat(filePath);
+      return {
+        videoId,
+        title: videoEntry.title,
+        filePath,
+        fileSize: stats.size,
+        format
+      };
+    } else {
+      // mp4の場合、拡張子が自動的に付けられている可能性があるので検索
+      if (format === 'mp4') {
+        const dir = await fs.readdir(outputDir);
+        const matchingFile = dir.find(file => file.startsWith(`${safeTitle}-${videoId}`));
+        
+        if (matchingFile) {
+          const actualFilePath = path.join(outputDir, matchingFile);
+          const stats = await fs.stat(actualFilePath);
+          
+          // 必要に応じてファイル名を修正
+          if (path.extname(actualFilePath).toLowerCase() !== '.mp4') {
+            const newFilePath = path.join(outputDir, `${safeTitle}-${videoId}.mp4`);
+            await fs.rename(actualFilePath, newFilePath);
+            console.log(`ファイル名を修正しました: ${matchingFile} -> ${path.basename(newFilePath)}`);
+            
+            return {
+              videoId,
+              title: videoEntry.title,
+              filePath: newFilePath,
+              fileSize: stats.size,
+              format
+            };
+          }
+          
+          console.log(`ダウンロード完了: ${matchingFile}`);
+          return {
+            videoId,
+            title: videoEntry.title,
+            filePath: actualFilePath,
+            fileSize: stats.size,
+            format
+          };
+        }
+      }
+      
+      throw new Error(`ダウンロードは成功したようですが、ファイルが見つかりません: ${filePath}`);
+    }
   } catch (error) {
     console.error(`ダウンロードエラー: ${error instanceof Error ? error.message : String(error)}`);
     // エラーが発生した場合、部分的にダウンロードされたファイルを削除
