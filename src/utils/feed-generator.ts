@@ -15,6 +15,7 @@ export interface FeedOptions {
   categories?: string[];
   explicit?: boolean;
   maxItems?: number;
+  baseUrl?: string;
 }
 
 export class FeedGenerator {
@@ -111,10 +112,16 @@ export class FeedGenerator {
       language: 'ja',
       categories: ['Technology'],
       explicit: false,
-      maxItems: 50
+      maxItems: 50,
+      baseUrl: ''
     };
     
     const feedOptions = { ...defaultOptions, ...options };
+    
+    // 絶対パスのイメージURLを生成
+    const absoluteImageUrl = feedOptions.baseUrl 
+      ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/icon.jpg` 
+      : feedOptions.imageUrl;
     
     // ポッドキャストフィードを作成
     const feed = new Podcast.Podcast({
@@ -122,7 +129,7 @@ export class FeedGenerator {
       description: feedOptions.description!,
       feedUrl: `${feedOptions.siteUrl}/feed.xml`,
       siteUrl: feedOptions.siteUrl!,
-      imageUrl: feedOptions.imageUrl!,
+      imageUrl: absoluteImageUrl,
       author: feedOptions.author!,
       copyright: feedOptions.copyright!,
       language: feedOptions.language!,
@@ -149,10 +156,19 @@ export class FeedGenerator {
     for (const entry of limitedEntries) {
       // ファイル名は動画IDだけを使用
       const fileExt = entry.format === 'mp3' ? 'mp3' : 'mp4';
-      const fileUrl = `${entry.videoId}.${fileExt}`;
       
       // 相対パスを絶対パスに変換
       const absoluteFilePath = this.toAbsolutePath(entry.filePath);
+      
+      // ファイルURLを生成（baseUrlがあれば絶対パス、なければ相対パス）
+      const fileUrl = feedOptions.baseUrl 
+        ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/media/${entry.videoId}.${fileExt}` 
+        : `${entry.videoId}.${fileExt}`;
+      
+      // アイテムのアイコンURL
+      const itunesImageUrl = feedOptions.baseUrl 
+        ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/icon.jpg` 
+        : feedOptions.imageUrl!;
       
       feed.addItem({
         title: entry.title, // チャンネル名を含めない
@@ -166,7 +182,7 @@ export class FeedGenerator {
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
         },
-        itunesImage: feedOptions.imageUrl! // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesImage: itunesImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
       });
     }
     
@@ -205,10 +221,16 @@ export class FeedGenerator {
       language: 'ja',
       categories: ['Technology'],
       explicit: false,
-      maxItems: 100
+      maxItems: 100,
+      baseUrl: ''
     };
     
     const feedOptions = { ...defaultOptions, ...options };
+    
+    // 絶対パスのイメージURLを生成
+    const absoluteImageUrl = feedOptions.baseUrl 
+      ? `${feedOptions.baseUrl}/podcasts/all/icon.jpg` 
+      : feedOptions.imageUrl;
     
     // ポッドキャストフィードを作成
     const feed = new Podcast.Podcast({
@@ -216,7 +238,7 @@ export class FeedGenerator {
       description: feedOptions.description!,
       feedUrl: `${feedOptions.siteUrl}/all-channels.xml`,
       siteUrl: feedOptions.siteUrl!,
-      imageUrl: feedOptions.imageUrl!,
+      imageUrl: absoluteImageUrl,
       author: feedOptions.author!,
       copyright: feedOptions.copyright!,
       language: feedOptions.language!,
@@ -255,22 +277,25 @@ export class FeedGenerator {
     for (const entry of limitedEntries) {
       // ファイル名は動画IDだけを使用
       const fileExt = entry.format === 'mp3' ? 'mp3' : 'mp4';
-      const fileUrl = `${entry.videoId}.${fileExt}`;
       
       // 相対パスを絶対パスに変換
       const absoluteFilePath = this.toAbsolutePath(entry.filePath);
       
       // チャンネル情報を取得
       const channel = channelMap.get(entry.channelLabel);
-      let channelImageUrl = feedOptions.imageUrl!;
       
-      // チャンネル固有のアイコンがあれば使用
-      if (channel) {
-        const iconPath = path.join('icons', `${channel.slug}.jpg`);
-        if (await fs.pathExists(path.join(outputDir, iconPath))) {
-          channelImageUrl = iconPath;
-        }
-      }
+      // チャンネルスラグを取得（チャンネルが見つからない場合はラベルから生成）
+      const channelSlug = channel ? channel.slug : entry.channelLabel.toLowerCase().replace(/\s+/g, '-');
+      
+      // ファイルURLを生成（baseUrlがあれば絶対パス、なければ相対パス）
+      const fileUrl = feedOptions.baseUrl 
+        ? `${feedOptions.baseUrl}/podcasts/${channelSlug}/media/${entry.videoId}.${fileExt}` 
+        : `${entry.videoId}.${fileExt}`;
+      
+      // アイテムのアイコンURL
+      const itunesImageUrl = feedOptions.baseUrl 
+        ? `${feedOptions.baseUrl}/podcasts/${channelSlug}/icon.jpg` 
+        : feedOptions.imageUrl!;
       
       feed.addItem({
         title: entry.title, // チャンネル名を含めない
@@ -284,7 +309,7 @@ export class FeedGenerator {
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
         },
-        itunesImage: channelImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesImage: itunesImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
       });
     }
     

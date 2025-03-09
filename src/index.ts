@@ -114,38 +114,27 @@ async function main() {
     // フィード生成をスキップしない場合
     if (!options.skipFeedGeneration) {
       console.log('\n===== RSSフィードを生成 =====');
-
-      // フィード出力ディレクトリを作成
+      
+      // フィードディレクトリを作成
       const feedDir = path.join(process.cwd(), 'feeds');
       await fs.ensureDir(feedDir);
-
-      // 各チャンネルの履歴エントリを読み込む
+      
+      // 各チャンネルの履歴エントリを取得
       const historyEntriesByChannel = new Map<string, HistoryEntry[]>();
       
       for (const channel of config.channels) {
-        const history = await historyManager.loadHistory(channel.slug);
-        if (history.length > 0) {
-          // SimpleHistoryEntryからHistoryEntryに変換
-          const historyEntries: HistoryEntry[] = history.map(entry => {
-            // ファイルサイズを取得
-            let fileSize = 0;
-            try {
-              const stats = fs.statSync(entry.filePath);
-              fileSize = stats.size;
-            } catch (error) {
-              console.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
-            }
-            
-            // ファイル形式を取得
-            const format = path.extname(entry.filePath).replace('.', '');
-            
+        const entries = await historyManager.loadHistory(channel.slug);
+        
+        if (entries.length > 0) {
+          // SimpleHistoryEntryをHistoryEntryに変換
+          const historyEntries = entries.map(entry => {
             return {
-              channelLabel: channel.label,
+              channelLabel: entry.channelLabel || channel.label,
               videoId: entry.videoId,
               title: entry.title,
               filePath: entry.filePath,
-              fileSize: fileSize,
-              format: format,
+              fileSize: fs.existsSync(entry.filePath) ? fs.statSync(entry.filePath).size : 0,
+              format: path.extname(entry.filePath).replace('.', ''),
               publishedAt: entry.publishDate,
               downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString()
             };
@@ -157,12 +146,26 @@ async function main() {
         }
       }
       
+      // baseUrlを設定
+      let baseUrl = '';
+      if (config.storage && config.storage.public_url) {
+        baseUrl = config.storage.public_url;
+      } else if (config.storage && config.storage.bucket) {
+        baseUrl = `https://${config.storage.bucket}.r2.dev`;
+      }
+      
+      // フィードオプションを設定
+      const feedOptions = {
+        ...(options.feedOptions || {}),
+        baseUrl
+      };
+      
       // フィードを生成
       const feedFiles = await FeedGenerator.generateAllFeeds(
         config.channels,
         historyEntriesByChannel,
         feedDir,
-        options.feedOptions
+        feedOptions
       );
       
       console.log(`${feedFiles.length}個のRSSフィードを生成しました`);
@@ -183,11 +186,8 @@ async function main() {
  * Cloudflare R2にファイルをアップロードする
  */
 async function uploadToR2(config: any, options: AppOptions) {
-  // R2の設定が存在するか確認
-  if (!config.storage || config.storage.type !== 'r2' || 
-      !config.storage.account_id || !config.storage.access_key_id || 
-      !config.storage.secret_access_key || !config.storage.bucket) {
-    console.error('R2の設定が不完全です。config.ymlを確認してください。');
+  if (!config.storage || config.storage.type !== 'r2') {
+    console.error('R2ストレージの設定が見つかりません。アップロードをスキップします。');
     return;
   }
   
@@ -195,15 +195,12 @@ async function uploadToR2(config: any, options: AppOptions) {
     console.log('\n===== Cloudflare R2にアップロード =====');
     
     // R2アップローダーを初期化
-    const r2Config: R2Config = {
+    const uploader = new R2Uploader({
       accountId: config.storage.account_id,
       accessKeyId: config.storage.access_key_id,
       secretAccessKey: config.storage.secret_access_key,
-      bucketName: config.storage.bucket,
-      skipBucketCheck: true  // バケットの存在確認をスキップ
-    };
-    
-    const uploader = new R2Uploader(r2Config);
+      bucketName: config.storage.bucket
+    });
     
     // バケットの存在を確認
     const bucketExists = await uploader.checkBucket();
@@ -215,15 +212,52 @@ async function uploadToR2(config: any, options: AppOptions) {
     // フィードのみをアップロードする場合
     if (options.uploadFeedOnly) {
       console.log('フィードファイルをアップロード中...');
-      const feedDir = path.join(process.cwd(), 'feeds');
-      const feedUrls = await uploader.uploadDirectory(feedDir, 'feeds');
-      console.log(`${feedUrls.length}個のフィードファイルをアップロードしました`);
       
-      // アイコンファイルもアップロード
-      const iconPath = path.join(feedDir, 'icon.jpg');
-      if (await fs.pathExists(iconPath)) {
-        await uploader.uploadFile(iconPath, 'feeds/icon.jpg', 'image/jpeg');
-        console.log('アイコンファイルをアップロードしました');
+      // 各チャンネルのフィードをアップロード
+      for (const channel of config.channels) {
+        // チャンネルフィードをアップロード
+        const channelFeedPath = path.join(process.cwd(), 'feeds', `${channel.slug}.xml`);
+        if (await fs.pathExists(channelFeedPath)) {
+          await uploader.uploadFile(
+            channelFeedPath, 
+            `podcasts/channels/${channel.slug}/feed.xml`, 
+            'application/xml'
+          );
+          console.log(`チャンネル "${channel.label}" のフィードをアップロードしました`);
+        }
+        
+        // チャンネルアイコンをアップロード
+        const channelIconPath = path.join(process.cwd(), 'feeds', 'icons', `${channel.slug}.jpg`);
+        if (await fs.pathExists(channelIconPath)) {
+          await uploader.uploadFile(
+            channelIconPath, 
+            `podcasts/channels/${channel.slug}/icon.jpg`, 
+            'image/jpeg'
+          );
+          console.log(`チャンネル "${channel.label}" のアイコンをアップロードしました`);
+        }
+      }
+      
+      // 統合フィードをアップロード
+      const allChannelsFeedPath = path.join(process.cwd(), 'feeds', 'all-channels.xml');
+      if (await fs.pathExists(allChannelsFeedPath)) {
+        await uploader.uploadFile(
+          allChannelsFeedPath, 
+          'podcasts/all-channels/feed.xml', 
+          'application/xml'
+        );
+        console.log('統合フィードをアップロードしました');
+      }
+      
+      // 統合アイコンをアップロード
+      const mainIconPath = path.join(process.cwd(), 'feeds', 'icon.jpg');
+      if (await fs.pathExists(mainIconPath)) {
+        await uploader.uploadFile(
+          mainIconPath, 
+          'podcasts/all-channels/icon.jpg', 
+          'image/jpeg'
+        );
+        console.log('統合アイコンをアップロードしました');
       }
       
       // 公開URLを表示
@@ -231,10 +265,11 @@ async function uploadToR2(config: any, options: AppOptions) {
       console.log('\n===== ポッドキャストフィードURL =====');
       
       for (const channel of config.channels) {
-        console.log(`${channel.label}: ${baseUrl}/feeds/${channel.slug}.xml`);
+        console.log(`${channel.label}: ${baseUrl}/podcasts/channels/${channel.slug}/feed.xml`);
       }
       
-      console.log(`統合フィード: ${baseUrl}/feeds/all-channels.xml`);
+      console.log(`統合フィード: ${baseUrl}/podcasts/all-channels/feed.xml`);
+      
       return;
     }
     
@@ -251,7 +286,7 @@ async function uploadToR2(config: any, options: AppOptions) {
         const files = await fs.readdir(channelDir);
         console.log(`チャンネル "${channel.label}" の${files.length}個のファイルをアップロード中...`);
         
-        const uploadedUrls = await uploader.uploadDirectory(channelDir, `downloads/${channel.slug}`);
+        const uploadedUrls = await uploader.uploadDirectory(channelDir, `podcasts/${channel.slug}/media`);
         totalUploaded += uploadedUrls.length;
       }
     }
@@ -260,15 +295,52 @@ async function uploadToR2(config: any, options: AppOptions) {
     
     // フィードもアップロード
     console.log('フィードファイルをアップロード中...');
-    const feedDir = path.join(process.cwd(), 'feeds');
-    const feedUrls = await uploader.uploadDirectory(feedDir, 'feeds');
-    console.log(`${feedUrls.length}個のフィードファイルをアップロードしました`);
     
-    // アイコンファイルもアップロード
-    const iconPath = path.join(feedDir, 'icon.jpg');
-    if (await fs.pathExists(iconPath)) {
-      await uploader.uploadFile(iconPath, 'feeds/icon.jpg', 'image/jpeg');
-      console.log('アイコンファイルをアップロードしました');
+    // 各チャンネルのフィードをアップロード
+    for (const channel of config.channels) {
+      // チャンネルフィードをアップロード
+      const channelFeedPath = path.join(process.cwd(), 'feeds', `${channel.slug}.xml`);
+      if (await fs.pathExists(channelFeedPath)) {
+        await uploader.uploadFile(
+          channelFeedPath, 
+          `podcasts/${channel.slug}/feed.xml`, 
+          'application/xml'
+        );
+        console.log(`チャンネル "${channel.label}" のフィードをアップロードしました`);
+      }
+      
+      // チャンネルアイコンをアップロード
+      const channelIconPath = path.join(process.cwd(), 'feeds', 'icons', `${channel.slug}.jpg`);
+      if (await fs.pathExists(channelIconPath)) {
+        await uploader.uploadFile(
+          channelIconPath, 
+          `podcasts/${channel.slug}/icon.jpg`, 
+          'image/jpeg'
+        );
+        console.log(`チャンネル "${channel.label}" のアイコンをアップロードしました`);
+      }
+    }
+    
+    // 統合フィードをアップロード
+    const allChannelsFeedPath = path.join(process.cwd(), 'feeds', 'all-channels.xml');
+    if (await fs.pathExists(allChannelsFeedPath)) {
+      await uploader.uploadFile(
+        allChannelsFeedPath, 
+        'podcasts/all/feed.xml', 
+        'application/xml'
+      );
+      console.log('統合フィードをアップロードしました');
+    }
+    
+    // 統合アイコンをアップロード
+    const mainIconPath = path.join(process.cwd(), 'feeds', 'icon.jpg');
+    if (await fs.pathExists(mainIconPath)) {
+      await uploader.uploadFile(
+        mainIconPath, 
+        'podcasts/all/icon.jpg', 
+        'image/jpeg'
+      );
+      console.log('統合アイコンをアップロードしました');
     }
     
     // 公開URLを表示
@@ -276,10 +348,10 @@ async function uploadToR2(config: any, options: AppOptions) {
     console.log('\n===== ポッドキャストフィードURL =====');
     
     for (const channel of config.channels) {
-      console.log(`${channel.label}: ${baseUrl}/feeds/${channel.slug}.xml`);
+      console.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
     }
     
-    console.log(`統合フィード: ${baseUrl}/feeds/all-channels.xml`);
+    console.log(`統合フィード: ${baseUrl}/podcasts/all/feed.xml`);
     
   } catch (error) {
     console.error('アップロード中にエラーが発生しました:', error);
