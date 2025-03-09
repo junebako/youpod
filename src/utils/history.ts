@@ -14,6 +14,16 @@ export interface HistoryEntry {
   downloadedAt: string;
 }
 
+export interface SimpleHistoryEntry {
+  videoId: string;
+  title: string;
+  url: string;
+  publishDate: string;
+  downloadDate: Date | string;
+  filePath: string;
+  channelLabel?: string;
+}
+
 export class HistoryManager {
   private historyFilePath: string;
   private history: Map<string, HistoryEntry>;
@@ -155,5 +165,136 @@ export class HistoryManager {
     ].join('\t');
     
     await fs.appendFile(this.historyFilePath, line + '\n');
+  }
+
+  /**
+   * チャンネルスラグを使用して履歴を読み込む
+   */
+  public async loadHistory(channelSlug: string): Promise<SimpleHistoryEntry[]> {
+    try {
+      // メインの履歴ファイルのパス
+      const historyFilePath = this.historyFilePath;
+      
+      // ファイルが存在しない場合は空の配列を返す
+      if (!await fs.pathExists(historyFilePath)) {
+        return [];
+      }
+      
+      const content = await fs.readFile(historyFilePath, 'utf-8');
+      const lines = content.trim().split('\n');
+      
+      // ヘッダー行がない場合は空の配列を返す
+      if (lines.length <= 1) {
+        return [];
+      }
+      
+      const entries: SimpleHistoryEntry[] = [];
+      
+      // ヘッダー行をスキップ
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        
+        const [
+          channelLabel,
+          videoId,
+          title,
+          filePath,
+          fileSize,
+          format,
+          publishedAt,
+          downloadedAt
+        ] = line.split('\t');
+        
+        // 指定されたチャンネルスラグに関連するエントリのみを追加
+        // ファイルパスにチャンネルスラグが含まれているかどうかで判断
+        if (filePath.includes(channelSlug)) {
+          entries.push({
+            videoId,
+            title,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            publishDate: publishedAt,
+            downloadDate: downloadedAt,
+            filePath,
+            channelLabel
+          });
+        }
+      }
+      
+      console.log(`チャンネル ${channelSlug} の履歴を ${entries.length} 件読み込みました`);
+      return entries;
+    } catch (error) {
+      console.error(`チャンネル ${channelSlug} の履歴読み込みに失敗しました:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * チャンネルスラグを使用して履歴に追加
+   */
+  public async addToHistory(channelSlug: string, entry: SimpleHistoryEntry): Promise<void> {
+    try {
+      // メインの履歴ファイルのパス
+      const historyFilePath = this.historyFilePath;
+      
+      // ディレクトリが存在することを確認
+      await fs.ensureDir(path.dirname(historyFilePath));
+      
+      // ファイルパスを相対パスに変換
+      const relativeFilePath = this.toRelativePath(entry.filePath);
+      
+      // ファイルサイズを取得
+      let fileSize = 0;
+      try {
+        const stats = await fs.stat(entry.filePath);
+        fileSize = stats.size;
+      } catch (error) {
+        console.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
+      }
+      
+      // ファイル形式を取得
+      const format = path.extname(entry.filePath).replace('.', '');
+      
+      // チャンネルラベルを取得（エントリから取得するか、スラグから推測）
+      const channelLabel = entry.channelLabel || (channelSlug.charAt(0).toUpperCase() + channelSlug.slice(1).replace(/-/g, ' '));
+      
+      // 新しいエントリを作成
+      const newEntry: HistoryEntry = {
+        channelLabel,
+        videoId: entry.videoId,
+        title: entry.title,
+        filePath: relativeFilePath,
+        fileSize,
+        format,
+        publishedAt: entry.publishDate,
+        downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString()
+      };
+      
+      // 既存のエントリを確認
+      if (this.history.has(entry.videoId)) {
+        // 既存のエントリを更新
+        this.history.set(entry.videoId, newEntry);
+      } else {
+        // 新しいエントリを追加
+        this.history.set(entry.videoId, newEntry);
+        
+        // ファイルに追加
+        const line = [
+          newEntry.channelLabel,
+          newEntry.videoId,
+          newEntry.title,
+          newEntry.filePath,
+          newEntry.fileSize,
+          newEntry.format,
+          newEntry.publishedAt,
+          newEntry.downloadedAt
+        ].join('\t');
+        
+        await fs.appendFile(historyFilePath, line + '\n');
+      }
+    } catch (error) {
+      console.error(`履歴への追加に失敗しました:`, error);
+      throw error;
+    }
   }
 } 

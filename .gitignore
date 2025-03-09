@@ -39,3 +39,6 @@ coverage/
 .npm
 .eslintcache
 .tsbuildinfo 
+
+# 設定ファイル（秘匿情報を含む）
+config.yml

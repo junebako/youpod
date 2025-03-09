@@ -3,9 +3,12 @@ import { XMLParser } from 'fast-xml-parser';
 
 export interface VideoEntry {
   id: string;
+  videoId: string;
   title: string;
   link: string;
+  videoUrl: string;
   published: string;
+  publishDate: string;
   updated: string;
   author: {
     name: string;
@@ -40,25 +43,31 @@ export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
       return [];
     }
     
-    return result.feed.entry.map((entry: any) => ({
-      id: entry['yt:videoId'],
-      title: entry.title,
-      link: entry.link.href,
-      published: entry.published,
-      updated: entry.updated,
-      author: {
-        name: entry.author.name,
-        uri: entry.author.uri
-      },
-      mediaGroup: {
-        thumbnail: {
-          url: entry['media:group']['media:thumbnail'].url,
-          width: entry['media:group']['media:thumbnail'].width,
-          height: entry['media:group']['media:thumbnail'].height
+    return result.feed.entry.map((entry: any) => {
+      const videoId = entry['yt:videoId'];
+      return {
+        id: videoId,
+        videoId: videoId,
+        title: entry.title,
+        link: entry.link.href,
+        videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        published: entry.published,
+        publishDate: entry.published,
+        updated: entry.updated,
+        author: {
+          name: entry.author.name,
+          uri: entry.author.uri
         },
-        description: entry['media:group']['media:description']
-      }
-    }));
+        mediaGroup: {
+          thumbnail: {
+            url: entry['media:group']['media:thumbnail'].url,
+            width: entry['media:group']['media:thumbnail'].width,
+            height: entry['media:group']['media:thumbnail'].height
+          },
+          description: entry['media:group']['media:description']
+        }
+      };
+    });
   } catch (error) {
     console.error('YouTubeフィードの取得に失敗しました:', error);
     throw error;

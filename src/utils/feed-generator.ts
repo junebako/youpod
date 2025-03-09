@@ -232,7 +232,7 @@ export class FeedGenerator {
     const channelMap = new Map<string, Channel>();
     
     for (const channel of channels) {
-      const entries = historyEntriesByChannel.get(channel.label) || [];
+      const entries = historyEntriesByChannel.get(channel.slug) || [];
       // チャンネル情報をマップに保存
       channelMap.set(channel.label, channel);
       // エントリをそのまま追加（タイトルにチャンネル名を追加しない）
@@ -301,7 +301,7 @@ export class FeedGenerator {
     
     // 各チャンネルのフィードを生成
     for (const channel of channels) {
-      const entries = historyEntriesByChannel.get(channel.label) || [];
+      const entries = historyEntriesByChannel.get(channel.slug) || [];
       if (entries.length === 0) {
         console.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
         continue;

@@ -3,8 +3,9 @@ import fs from 'fs-extra';
 import { loadConfig } from './utils/config';
 import { fetchYouTubeFeed, VideoEntry } from './utils/feed';
 import { downloadVideo, DownloadOptions } from './utils/downloader';
-import { HistoryManager } from './utils/history';
+import { HistoryManager, HistoryEntry } from './utils/history';
 import { FeedGenerator, FeedOptions } from './utils/feed-generator';
+import { R2Uploader, R2Config } from './utils/r2-uploader';
 
 interface AppOptions {
   maxVideos?: number;
@@ -14,6 +15,8 @@ interface AppOptions {
   skipDownload?: boolean;
   skipFeedGeneration?: boolean;
   feedOptions?: FeedOptions;
+  upload?: boolean;
+  uploadFeedOnly?: boolean;
 }
 
 async function main() {
@@ -60,83 +63,242 @@ async function main() {
           continue;
         }
         
-        // 処理する動画数を制限
-        const maxVideos = options.maxVideos || 10;
+        // 履歴を読み込み
+        const history = await historyManager.loadHistory(channel.slug);
         
-        // 未ダウンロードの動画をフィルタリング
-        const newVideos = videos.filter(video => !historyManager.isDownloaded(video.id));
-        console.log(`${newVideos.length}個の新しい動画が見つかりました`);
+        // 新しい動画をフィルタリング
+        const newVideos = videos.filter(video => !history.some(h => h.videoId === video.videoId));
+        console.log(`うち${newVideos.length}個が新しい動画です`);
         
-        // 最新の動画から指定数だけ処理
-        const videosToDownload = newVideos.slice(0, maxVideos);
-        console.log(`${videosToDownload.length}件をダウンロードします`);
+        // 最大数を制限
+        const videosToDownload = newVideos.slice(0, options.maxVideos || 10);
         
         // 各動画をダウンロード
-        const downloadOptions: DownloadOptions = {
-          outputDir: channelDir,
-          // チャンネルのformatに基づいてファイル形式を決定
-          format: options.format || (channel.format === 'audio' ? 'mp3' : 'mp4'),
-          quality: 'best'
-        };
-        
         for (const video of videosToDownload) {
+          console.log(`\n動画をダウンロード中: ${video.title}`);
+          
+          const downloadOptions: DownloadOptions = {
+            format: channel.format === 'audio' || options.format === 'mp3' ? 'mp3' : 'mp4',
+            outputDir: channelDir,
+            videoId: video.videoId,
+            title: video.title,
+            channelSlug: channel.slug
+          };
+          
           try {
-            const result = await downloadVideo(video, downloadOptions);
+            const downloadedFile = await downloadVideo(video.videoUrl, downloadOptions);
+            
             // 履歴に追加
-            await historyManager.addEntry(channel.label, video, result);
+            await historyManager.addToHistory(channel.slug, {
+              videoId: video.videoId,
+              title: video.title,
+              url: video.videoUrl,
+              publishDate: video.publishDate,
+              downloadDate: new Date(),
+              filePath: downloadedFile,
+              channelLabel: channel.label
+            });
+            
+            console.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
-            console.error(`動画のダウンロードに失敗しました: ${video.title}`, error);
+            console.error(`ダウンロード失敗: ${error}`);
           }
         }
       }
-      
-      console.log('\n全てのダウンロードが完了しました');
     }
     
-    // RSSフィード生成をスキップしない場合
+    // フィード生成をスキップしない場合
     if (!options.skipFeedGeneration) {
-      console.log('\nRSSフィードを生成します...');
+      console.log('\n===== RSSフィードを生成 =====');
       
-      // 各チャンネルの履歴エントリを取得
-      const historyEntriesByChannel = new Map();
-      for (const channel of channelsToProcess) {
-        const entries = historyManager.getChannelEntries(channel.label);
-        historyEntriesByChannel.set(channel.label, entries);
+      // フィード出力ディレクトリを作成
+      const feedDir = path.join(process.cwd(), 'feeds');
+      await fs.ensureDir(feedDir);
+      
+      // 各チャンネルの履歴エントリを読み込む
+      const historyEntriesByChannel = new Map<string, HistoryEntry[]>();
+      
+      for (const channel of config.channels) {
+        const history = await historyManager.loadHistory(channel.slug);
+        if (history.length > 0) {
+          // SimpleHistoryEntryからHistoryEntryに変換
+          const historyEntries: HistoryEntry[] = history.map(entry => {
+            // ファイルサイズを取得
+            let fileSize = 0;
+            try {
+              const stats = fs.statSync(entry.filePath);
+              fileSize = stats.size;
+            } catch (error) {
+              console.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
+            }
+            
+            // ファイル形式を取得
+            const format = path.extname(entry.filePath).replace('.', '');
+            
+            return {
+              channelLabel: channel.label,
+              videoId: entry.videoId,
+              title: entry.title,
+              filePath: entry.filePath,
+              fileSize: fileSize,
+              format: format,
+              publishedAt: entry.publishDate,
+              downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString()
+            };
+          });
+          
+          historyEntriesByChannel.set(channel.slug, historyEntries);
+        } else {
+          console.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
+        }
       }
       
-      // RSSフィードの出力ディレクトリ
-      const feedOutputDir = path.join(process.cwd(), 'feeds');
-      
-      // RSSフィードを生成
-      const feedPaths = await FeedGenerator.generateAllFeeds(
-        channelsToProcess,
+      // フィードを生成
+      const feedFiles = await FeedGenerator.generateAllFeeds(
+        config.channels,
         historyEntriesByChannel,
-        feedOutputDir,
+        feedDir,
         options.feedOptions
       );
       
-      console.log(`${feedPaths.length}個のRSSフィードを生成しました`);
+      console.log(`${feedFiles.length}個のRSSフィードを生成しました`);
     }
+    
+    // アップロード処理
+    if (options.upload || options.uploadFeedOnly) {
+      await uploadToR2(config, options);
+    }
+    
   } catch (error) {
     console.error('エラーが発生しました:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
 /**
- * コマンドライン引数を解析する
+ * Cloudflare R2にファイルをアップロードする
  */
-function parseCommandLineArgs(): AppOptions {
-  const options: AppOptions = {};
+async function uploadToR2(config: any, options: AppOptions) {
+  // R2の設定が存在するか確認
+  if (!config.storage || config.storage.type !== 'r2' || 
+      !config.storage.account_id || !config.storage.access_key_id || 
+      !config.storage.secret_access_key || !config.storage.bucket) {
+    console.error('R2の設定が不完全です。config.ymlを確認してください。');
+    return;
+  }
   
-  // コマンドライン引数を処理
+  try {
+    console.log('\n===== Cloudflare R2にアップロード =====');
+    
+    // R2アップローダーを初期化
+    const r2Config: R2Config = {
+      accountId: config.storage.account_id,
+      accessKeyId: config.storage.access_key_id,
+      secretAccessKey: config.storage.secret_access_key,
+      bucketName: config.storage.bucket,
+      skipBucketCheck: true  // バケットの存在確認をスキップ
+    };
+    
+    const uploader = new R2Uploader(r2Config);
+    
+    // バケットの存在を確認
+    const bucketExists = await uploader.checkBucket();
+    if (!bucketExists) {
+      console.error(`バケット "${config.storage.bucket}" が存在しません。`);
+      return;
+    }
+    
+    // フィードのみをアップロードする場合
+    if (options.uploadFeedOnly) {
+      console.log('フィードファイルをアップロード中...');
+      const feedDir = path.join(process.cwd(), 'feeds');
+      const feedUrls = await uploader.uploadDirectory(feedDir, 'feeds');
+      console.log(`${feedUrls.length}個のフィードファイルをアップロードしました`);
+      
+      // アイコンファイルもアップロード
+      const iconPath = path.join(feedDir, 'icon.jpg');
+      if (await fs.pathExists(iconPath)) {
+        await uploader.uploadFile(iconPath, 'feeds/icon.jpg', 'image/jpeg');
+        console.log('アイコンファイルをアップロードしました');
+      }
+      
+      // 公開URLを表示
+      const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
+      console.log('\n===== ポッドキャストフィードURL =====');
+      
+      for (const channel of config.channels) {
+        console.log(`${channel.label}: ${baseUrl}/feeds/${channel.slug}.xml`);
+      }
+      
+      console.log(`統合フィード: ${baseUrl}/feeds/all-channels.xml`);
+      return;
+    }
+    
+    // すべてのファイルをアップロード
+    console.log('ダウンロードしたファイルをアップロード中...');
+    
+    // 各チャンネルのディレクトリをアップロード
+    const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
+    let totalUploaded = 0;
+    
+    for (const channel of config.channels) {
+      const channelDir = path.join(outputBaseDir, channel.slug);
+      if (await fs.pathExists(channelDir)) {
+        const files = await fs.readdir(channelDir);
+        console.log(`チャンネル "${channel.label}" の${files.length}個のファイルをアップロード中...`);
+        
+        const uploadedUrls = await uploader.uploadDirectory(channelDir, `downloads/${channel.slug}`);
+        totalUploaded += uploadedUrls.length;
+      }
+    }
+    
+    console.log(`${totalUploaded}個のメディアファイルをアップロードしました`);
+    
+    // フィードもアップロード
+    console.log('フィードファイルをアップロード中...');
+    const feedDir = path.join(process.cwd(), 'feeds');
+    const feedUrls = await uploader.uploadDirectory(feedDir, 'feeds');
+    console.log(`${feedUrls.length}個のフィードファイルをアップロードしました`);
+    
+    // アイコンファイルもアップロード
+    const iconPath = path.join(feedDir, 'icon.jpg');
+    if (await fs.pathExists(iconPath)) {
+      await uploader.uploadFile(iconPath, 'feeds/icon.jpg', 'image/jpeg');
+      console.log('アイコンファイルをアップロードしました');
+    }
+    
+    // 公開URLを表示
+    const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
+    console.log('\n===== ポッドキャストフィードURL =====');
+    
+    for (const channel of config.channels) {
+      console.log(`${channel.label}: ${baseUrl}/feeds/${channel.slug}.xml`);
+    }
+    
+    console.log(`統合フィード: ${baseUrl}/feeds/all-channels.xml`);
+    
+  } catch (error) {
+    console.error('アップロード中にエラーが発生しました:', error);
+  }
+}
+
+function parseCommandLineArgs(): AppOptions {
+  const options: AppOptions = {
+    maxVideos: 10,
+    format: 'mp4',
+    skipDownload: false,
+    skipFeedGeneration: false,
+    upload: false,
+    uploadFeedOnly: false
+  };
+  
   for (let i = 2; i < process.argv.length; i++) {
     const arg = process.argv[i];
     
     if (arg === '--max' || arg === '-m') {
-      const value = process.argv[++i];
-      if (value && !isNaN(Number(value))) {
-        options.maxVideos = Number(value);
+      const value = parseInt(process.argv[++i], 10);
+      if (!isNaN(value)) {
+        options.maxVideos = value;
       }
     } else if (arg === '--format' || arg === '-f') {
       const value = process.argv[++i];
@@ -154,6 +316,11 @@ function parseCommandLineArgs(): AppOptions {
     } else if (arg === '--feed-only') {
       options.skipDownload = true;
       options.skipFeedGeneration = false;
+    } else if (arg === '--upload') {
+      options.upload = true;
+    } else if (arg === '--upload-feed') {
+      options.uploadFeedOnly = true;
+      options.skipDownload = true;
     }
   }
   

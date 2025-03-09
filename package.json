@@ -14,9 +14,15 @@
     "mp3": "ts-node src/index.ts --format mp3",
     "mp4": "ts-node src/index.ts --format mp4",
     "feed": "ts-node src/index.ts --feed-only",
-    "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ"
+    "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ",
+    "upload": "ts-node src/index.ts --upload",
+    "upload:feed": "ts-node src/index.ts --upload-feed",
+    "clean": "ts-node clean-downloads.ts",
+    "fix-history": "ts-node fix-history-labels.ts",
+    "clean-history": "ts-node clean-history.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
     "axios": "^1.6.2",
     "fast-xml-parser": "^4.3.2",
     "fs-extra": "^11.2.0",
