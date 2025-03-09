@@ -5,19 +5,17 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "ts-node src/index.ts --all",
     "dev": "ts-node src/index.ts",
-    "test": "ts-node src/index.ts --max 1",
-    "test:mp3": "ts-node src/index.ts --max 1 --format mp3",
-    "test:yancya": "ts-node src/index.ts --max 1 --channel やんちゃクラブ",
-    "test:yancya:mp3": "ts-node src/index.ts --max 1 --channel やんちゃクラブ --format mp3",
-    "mp3": "ts-node src/index.ts --format mp3",
-    "mp4": "ts-node src/index.ts --format mp4",
+    "download": "ts-node src/index.ts --download-only",
     "feed": "ts-node src/index.ts --feed-only",
-    "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ",
-    "upload": "ts-node src/index.ts --upload",
-    "upload:feed": "ts-node src/index.ts --upload-feed",
-    "upload:only": "ts-node src/index.ts --upload-only"
+    "upload": "ts-node src/index.ts --upload-only",
+    "all": "ts-node src/index.ts --all",
+    "test": "ts-node src/index.ts --download-only --max 1",
+    "test:mp3": "ts-node src/index.ts --download-only --max 1 --format mp3",
+    "test:channel": "ts-node src/index.ts --download-only --max 1 --channel",
+    "mp3": "ts-node src/index.ts --download-only --format mp3",
+    "mp4": "ts-node src/index.ts --download-only --format mp4"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
