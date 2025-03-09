@@ -19,6 +19,59 @@ export interface FeedOptions {
 
 export class FeedGenerator {
   /**
+   * XMLを整形する（シンプルな実装）
+   */
+  private static prettyXml(xml: string): string {
+    // XML宣言を取り出す
+    const xmlDeclaration = xml.match(/^<\?xml[^>]*\?>/);
+    const xmlWithoutDeclaration = xml.replace(/^<\?xml[^>]*\?>/, '');
+    
+    // 整形のためのシンプルな実装
+    let formatted = '';
+    let depth = 0;
+    const tab = '  '; // 2スペースのインデント
+    
+    // タグごとに分割
+    const tokens = xmlWithoutDeclaration.split(/(<\/?[^>]+>)/g);
+    
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i].trim();
+      if (!token) continue;
+      
+      // 終了タグまたは自己終了タグの場合はインデントを減らす
+      if (token.match(/^<\//)) {
+        depth--;
+      }
+      
+      // インデントを追加
+      const indent = tab.repeat(Math.max(0, depth));
+      
+      // CDATAセクションの場合は特別処理
+      if (token.includes('<![CDATA[')) {
+        formatted += indent + token + '\n';
+      } else if (token.match(/^<[^\/]/)) {
+        // 開始タグの場合
+        formatted += indent + token + '\n';
+        
+        // 自己終了タグでなければインデントを増やす
+        if (!token.match(/\/>$/)) {
+          depth++;
+        }
+      } else {
+        // その他のタグやテキスト
+        formatted += indent + token + '\n';
+      }
+    }
+    
+    // XML宣言を先頭に戻す
+    if (xmlDeclaration && xmlDeclaration[0]) {
+      return xmlDeclaration[0] + '\n' + formatted;
+    }
+    
+    return formatted;
+  }
+
+  /**
    * チャンネルのRSSフィードを生成する
    */
   public static async generateChannelFeed(
@@ -95,12 +148,13 @@ export class FeedGenerator {
       });
     }
     
-    // XMLを生成
+    // XMLを生成して整形
     const xml = feed.buildXml();
+    const prettyXml = this.prettyXml(xml);
     
     // ファイルに保存
     const outputPath = path.join(outputDir, `${channel.label}.xml`);
-    await fs.writeFile(outputPath, xml);
+    await fs.writeFile(outputPath, prettyXml);
     
     console.log(`RSSフィードを生成しました: ${outputPath}`);
     return outputPath;
