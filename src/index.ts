@@ -17,6 +17,7 @@ interface AppOptions {
   uploadOnly?: boolean;
   all?: boolean;
   feedOptions?: FeedOptions;
+  qualityPreset?: 'low' | 'medium' | 'high';
 }
 
 async function main() {
@@ -86,7 +87,8 @@ async function main() {
             outputDir: channelDir,
             videoId: video.videoId,
             title: video.title,
-            channelSlug: channel.slug
+            channelSlug: channel.slug,
+            qualityPreset: options.qualityPreset || 'medium'  // コマンドラインから指定された品質プリセットを使用
           };
 
           try {
@@ -464,6 +466,10 @@ function parseCommandLineArgs(): AppOptions {
       options.uploadOnly = true;
     } else if (arg === '--all') {
       options.all = true;
+    } else if (arg === '--quality' || arg === '-q') {
+      const quality = process.argv[++i];
+      options.qualityPreset = (quality === 'low' || quality === 'medium' || quality === 'high') ? 
+        quality as 'low' | 'medium' | 'high' : 'medium';
     }
   }
   
