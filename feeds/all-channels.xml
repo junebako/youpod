@@ -14,7 +14,7 @@
       Podcast for Node
     </generator>
     <lastBuildDate>
-      Sun, 09 Mar 2025 07:25:08 GMT
+      Sun, 09 Mar 2025 07:37:44 GMT
     </lastBuildDate>
     <atom:link href="https://example.com/all-channels.xml" rel="self" type="application/rss+xml"/>
     <author>
@@ -49,15 +49,16 @@
     <itunes:explicit>
       false
     </itunes:explicit>
+    <itunes:image href="icon.jpg"/>
     <item>
       <title>
-        <![CDATA[[やんちゃクラブ] 他人にボトルを任せるな]]>
+        <![CDATA[他人にボトルを任せるな]]>
       </title>
       <description>
-        <![CDATA[[やんちゃクラブ] 他人にボトルを任せるな]]>
+        <![CDATA[他人にボトルを任せるな]]>
       </description>
       <link>
-        https://example.com/items/I31Alz-5SmA
+        https://www.youtube.com/watch?v=I31Alz-5SmA
       </link>
       <guid isPermaLink="false">
         I31Alz-5SmA
@@ -70,21 +71,22 @@
       </pubDate>
       <enclosure url="I31Alz-5SmA.mp4" length="35750935" type="video/mp4"/>
       <itunes:summary>
-        [やんちゃクラブ] 他人にボトルを任せるな
+        他人にボトルを任せるな
       </itunes:summary>
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
     <item>
       <title>
-        <![CDATA[[モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！]]>
+        <![CDATA[【251】ついに…科学の世界へ！！！！！！！]]>
       </title>
       <description>
-        <![CDATA[[モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！]]>
+        <![CDATA[【251】ついに…科学の世界へ！！！！！！！]]>
       </description>
       <link>
-        https://example.com/items/UZxbUS78TTM
+        https://www.youtube.com/watch?v=UZxbUS78TTM
       </link>
       <guid isPermaLink="false">
         UZxbUS78TTM
@@ -97,21 +99,22 @@
       </pubDate>
       <enclosure url="UZxbUS78TTM.mp3" length="58557356" type="audio/mpeg"/>
       <itunes:summary>
-        [モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！
+        【251】ついに…科学の世界へ！！！！！！！
       </itunes:summary>
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
     <item>
       <title>
-        <![CDATA[[やんちゃクラブ] やらないとやらんと]]>
+        <![CDATA[やらないとやらんと]]>
       </title>
       <description>
-        <![CDATA[[やんちゃクラブ] やらないとやらんと]]>
+        <![CDATA[やらないとやらんと]]>
       </description>
       <link>
-        https://example.com/items/jDpFZzFLnds
+        https://www.youtube.com/watch?v=jDpFZzFLnds
       </link>
       <guid isPermaLink="false">
         jDpFZzFLnds
@@ -124,21 +127,22 @@
       </pubDate>
       <enclosure url="jDpFZzFLnds.mp4" length="27248465" type="video/mp4"/>
       <itunes:summary>
-        [やんちゃクラブ] やらないとやらんと
+        やらないとやらんと
       </itunes:summary>
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
     <item>
       <title>
-        <![CDATA[[やんちゃクラブ] 繰り上がり昇格すごい]]>
+        <![CDATA[繰り上がり昇格すごい]]>
       </title>
       <description>
-        <![CDATA[[やんちゃクラブ] 繰り上がり昇格すごい]]>
+        <![CDATA[繰り上がり昇格すごい]]>
       </description>
       <link>
-        https://example.com/items/jkQHll4QN10
+        https://www.youtube.com/watch?v=jkQHll4QN10
       </link>
       <guid isPermaLink="false">
         jkQHll4QN10
@@ -151,11 +155,12 @@
       </pubDate>
       <enclosure url="jkQHll4QN10.mp4" length="32576264" type="video/mp4"/>
       <itunes:summary>
-        [やんちゃクラブ] 繰り上がり昇格すごい
+        繰り上がり昇格すごい
       </itunes:summary>
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
   </channel>
 </rss>

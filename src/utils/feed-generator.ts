@@ -93,12 +93,15 @@ export class FeedGenerator {
     // 出力ディレクトリを確保
     await fs.ensureDir(outputDir);
     
+    // チャンネルIDを取得
+    const channelId = channel.feed_url.split('channel_id=')[1];
+    
     // デフォルトオプションをマージ
     const defaultOptions: FeedOptions = {
       title: channel.label,
       description: `${channel.label} のポッドキャスト`,
-      siteUrl: `https://www.youtube.com/channel/${channel.feed_url.split('channel_id=')[1]}`,
-      imageUrl: '',
+      siteUrl: `https://www.youtube.com/channel/${channelId}`,
+      imageUrl: 'icon.jpg', // チャンネルのアイコンを設定
       author: channel.label,
       copyright: `Copyright ${new Date().getFullYear()} ${channel.label}`,
       language: 'ja',
@@ -148,9 +151,9 @@ export class FeedGenerator {
       const absoluteFilePath = this.toAbsolutePath(entry.filePath);
       
       feed.addItem({
-        title: entry.title,
+        title: entry.title, // チャンネル名を含めない
         description: entry.title,
-        url: `${feedOptions.siteUrl}/items/${entry.videoId}`,
+        url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
         guid: entry.videoId,
         date: new Date(entry.publishedAt),
         enclosure: {
@@ -158,7 +161,8 @@ export class FeedGenerator {
           file: absoluteFilePath,
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
-        }
+        },
+        itunesImage: feedOptions.imageUrl! // アイテムのアイコンにチャンネルのアイコンを設定
       });
     }
     
@@ -191,7 +195,7 @@ export class FeedGenerator {
       title: 'すべてのチャンネル',
       description: 'すべてのYouTubeチャンネルのポッドキャスト',
       siteUrl: 'https://example.com',
-      imageUrl: '',
+      imageUrl: 'icon.jpg', // チャンネルのアイコンを設定
       author: 'YouPod',
       copyright: `Copyright ${new Date().getFullYear()} YouPod`,
       language: 'ja',
@@ -225,14 +229,14 @@ export class FeedGenerator {
     
     // すべてのエントリを収集
     const allEntries: HistoryEntry[] = [];
+    const channelMap = new Map<string, Channel>();
+    
     for (const channel of channels) {
       const entries = historyEntriesByChannel.get(channel.label) || [];
-      // チャンネル名をタイトルに追加
-      const entriesWithChannelInfo = entries.map(entry => ({
-        ...entry,
-        title: `[${channel.label}] ${entry.title}`
-      }));
-      allEntries.push(...entriesWithChannelInfo);
+      // チャンネル情報をマップに保存
+      channelMap.set(channel.label, channel);
+      // エントリをそのまま追加（タイトルにチャンネル名を追加しない）
+      allEntries.push(...entries);
     }
     
     // エントリを日付順にソート（新しい順）
@@ -252,10 +256,14 @@ export class FeedGenerator {
       // 相対パスを絶対パスに変換
       const absoluteFilePath = this.toAbsolutePath(entry.filePath);
       
+      // チャンネル情報を取得
+      const channel = channelMap.get(entry.channelLabel);
+      const channelImageUrl = channel ? 'icon.jpg' : feedOptions.imageUrl!;
+      
       feed.addItem({
-        title: entry.title,
+        title: entry.title, // チャンネル名を含めない
         description: entry.title,
-        url: `${feedOptions.siteUrl}/items/${entry.videoId}`,
+        url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
         guid: entry.videoId,
         date: new Date(entry.publishedAt),
         enclosure: {
@@ -263,7 +271,8 @@ export class FeedGenerator {
           file: absoluteFilePath,
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
-        }
+        },
+        itunesImage: channelImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
       });
     }
     

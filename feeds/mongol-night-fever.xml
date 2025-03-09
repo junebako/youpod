@@ -14,7 +14,7 @@
       Podcast for Node
     </generator>
     <lastBuildDate>
-      Sun, 09 Mar 2025 07:25:08 GMT
+      Sun, 09 Mar 2025 07:37:44 GMT
     </lastBuildDate>
     <atom:link href="https://www.youtube.com/channel/UCWzXsL9T4nAskfsf_9aXFaQ/feed.xml" rel="self" type="application/rss+xml"/>
     <author>
@@ -49,6 +49,7 @@
     <itunes:explicit>
       false
     </itunes:explicit>
+    <itunes:image href="icon.jpg"/>
     <item>
       <title>
         <![CDATA[【251】ついに…科学の世界へ！！！！！！！]]>
@@ -57,7 +58,7 @@
         <![CDATA[【251】ついに…科学の世界へ！！！！！！！]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCWzXsL9T4nAskfsf_9aXFaQ/items/UZxbUS78TTM
+        https://www.youtube.com/watch?v=UZxbUS78TTM
       </link>
       <guid isPermaLink="false">
         UZxbUS78TTM
@@ -75,6 +76,7 @@
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
   </channel>
 </rss>

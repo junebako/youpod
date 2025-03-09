@@ -14,7 +14,7 @@
       Podcast for Node
     </generator>
     <lastBuildDate>
-      Sun, 09 Mar 2025 07:25:08 GMT
+      Sun, 09 Mar 2025 07:37:44 GMT
     </lastBuildDate>
     <atom:link href="https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/feed.xml" rel="self" type="application/rss+xml"/>
     <author>
@@ -49,6 +49,7 @@
     <itunes:explicit>
       false
     </itunes:explicit>
+    <itunes:image href="icon.jpg"/>
     <item>
       <title>
         <![CDATA[他人にボトルを任せるな]]>
@@ -57,7 +58,7 @@
         <![CDATA[他人にボトルを任せるな]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/I31Alz-5SmA
+        https://www.youtube.com/watch?v=I31Alz-5SmA
       </link>
       <guid isPermaLink="false">
         I31Alz-5SmA
@@ -75,6 +76,7 @@
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
     <item>
       <title>
@@ -84,7 +86,7 @@
         <![CDATA[やらないとやらんと]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/jDpFZzFLnds
+        https://www.youtube.com/watch?v=jDpFZzFLnds
       </link>
       <guid isPermaLink="false">
         jDpFZzFLnds
@@ -102,6 +104,7 @@
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
     <item>
       <title>
@@ -111,7 +114,7 @@
         <![CDATA[繰り上がり昇格すごい]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/jkQHll4QN10
+        https://www.youtube.com/watch?v=jkQHll4QN10
       </link>
       <guid isPermaLink="false">
         jkQHll4QN10
@@ -129,6 +132,7 @@
       <itunes:explicit>
         false
       </itunes:explicit>
+      <itunes:image href="icon.jpg"/>
     </item>
   </channel>
 </rss>
