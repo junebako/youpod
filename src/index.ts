@@ -1,11 +1,12 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { loadConfig } from './utils/config';
-import { fetchYouTubeFeed, VideoEntry } from './utils/feed';
+import { loadConfig, Channel } from './utils/config';
+import { fetchYouTubeFeed, VideoEntry, fetchChannelIcon } from './utils/feed';
 import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { HistoryManager, HistoryEntry } from './utils/history';
 import { FeedGenerator, FeedOptions } from './utils/feed-generator';
 import { R2Uploader, R2Config } from './utils/r2-uploader';
+import axios from 'axios';
 
 interface AppOptions {
   maxVideos?: number;
@@ -23,60 +24,63 @@ async function main() {
   try {
     // コマンドライン引数を解析
     const options = parseCommandLineArgs();
-    
+
     // 履歴マネージャーを初期化
     const historyManager = new HistoryManager();
-    
+
     // 設定ファイルを読み込む
     const config = await loadConfig();
     console.log(`${config.channels.length}個のチャンネルが設定されています`);
-    
+
+    // チャンネルアイコンを取得
+    await fetchChannelIcons(config.channels);
+
     // 出力ディレクトリを作成
     const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
     await fs.ensureDir(outputBaseDir);
-    
+
     // 処理するチャンネルをフィルタリング
     const channelsToProcess = options.channelLabel 
       ? config.channels.filter(channel => channel.label === options.channelLabel)
       : config.channels;
-    
+
     if (options.channelLabel && channelsToProcess.length === 0) {
       console.warn(`警告: 指定されたチャンネル "${options.channelLabel}" が見つかりませんでした`);
       return;
     }
-    
+
     // ダウンロード処理をスキップしない場合
     if (!options.skipDownload) {
       // 各チャンネルを処理
       for (const channel of channelsToProcess) {
         console.log(`\n===== チャンネル: ${channel.label} =====`);
-        
+
         // チャンネル用のディレクトリを作成（slugを使用）
         const channelDir = path.join(outputBaseDir, channel.slug);
         await fs.ensureDir(channelDir);
-        
+
         // フィードを取得
         const videos = await fetchYouTubeFeed(channel.feed_url);
         console.log(`${videos.length}個の動画が見つかりました`);
-        
+
         if (videos.length === 0) {
           continue;
         }
-        
+
         // 履歴を読み込み
         const history = await historyManager.loadHistory(channel.slug);
-        
+
         // 新しい動画をフィルタリング
         const newVideos = videos.filter(video => !history.some(h => h.videoId === video.videoId));
         console.log(`うち${newVideos.length}個が新しい動画です`);
-        
+
         // 最大数を制限
         const videosToDownload = newVideos.slice(0, options.maxVideos || 10);
-        
+
         // 各動画をダウンロード
         for (const video of videosToDownload) {
           console.log(`\n動画をダウンロード中: ${video.title}`);
-          
+
           const downloadOptions: DownloadOptions = {
             format: channel.format === 'audio' || options.format === 'mp3' ? 'mp3' : 'mp4',
             outputDir: channelDir,
@@ -84,10 +88,10 @@ async function main() {
             title: video.title,
             channelSlug: channel.slug
           };
-          
+
           try {
             const downloadedFile = await downloadVideo(video.videoUrl, downloadOptions);
-            
+
             // 履歴に追加
             await historyManager.addToHistory(channel.slug, {
               videoId: video.videoId,
@@ -98,7 +102,7 @@ async function main() {
               filePath: downloadedFile,
               channelLabel: channel.label
             });
-            
+
             console.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
             console.error(`ダウンロード失敗: ${error}`);
@@ -106,15 +110,15 @@ async function main() {
         }
       }
     }
-    
+
     // フィード生成をスキップしない場合
     if (!options.skipFeedGeneration) {
       console.log('\n===== RSSフィードを生成 =====');
-      
+
       // フィード出力ディレクトリを作成
       const feedDir = path.join(process.cwd(), 'feeds');
       await fs.ensureDir(feedDir);
-      
+
       // 各チャンネルの履歴エントリを読み込む
       const historyEntriesByChannel = new Map<string, HistoryEntry[]>();
       
@@ -279,6 +283,45 @@ async function uploadToR2(config: any, options: AppOptions) {
     
   } catch (error) {
     console.error('アップロード中にエラーが発生しました:', error);
+  }
+}
+
+/**
+ * 各チャンネルのアイコン画像を取得する
+ */
+async function fetchChannelIcons(channels: Channel[]) {
+  console.log('チャンネルアイコンを取得しています...');
+  
+  for (const channel of channels) {
+    try {
+      // チャンネルIDを取得
+      const channelId = channel.feed_url.split('channel_id=')[1];
+      if (!channelId) {
+        console.warn(`警告: チャンネル "${channel.label}" のIDを取得できませんでした`);
+        continue;
+      }
+      
+      // アイコンを取得
+      const iconInfo = await fetchChannelIcon(channelId);
+      if (iconInfo) {
+        // アイコンURLを保存
+        channel.iconUrl = iconInfo.medium.url;
+        console.log(`チャンネル "${channel.label}" のアイコンを取得しました: ${channel.iconUrl}`);
+        
+        // アイコン画像をダウンロード
+        const iconDir = path.join(process.cwd(), 'feeds', 'icons');
+        await fs.ensureDir(iconDir);
+        
+        const iconPath = path.join(iconDir, `${channel.slug}.jpg`);
+        const response = await axios.get(iconInfo.medium.url, { responseType: 'arraybuffer' });
+        await fs.writeFile(iconPath, response.data);
+        console.log(`チャンネルアイコンを保存しました: ${iconPath}`);
+      } else {
+        console.warn(`警告: チャンネル "${channel.label}" のアイコンを取得できませんでした`);
+      }
+    } catch (error) {
+      console.error(`チャンネル "${channel.label}" のアイコン取得中にエラーが発生しました:`, error);
+    }
   }
 }
 

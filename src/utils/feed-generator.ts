@@ -96,12 +96,16 @@ export class FeedGenerator {
     // チャンネルIDを取得
     const channelId = channel.feed_url.split('channel_id=')[1];
     
+    // チャンネルアイコンのパスを設定
+    const iconPath = path.join('icons', `${channel.slug}.jpg`);
+    const hasCustomIcon = channel.iconUrl && await fs.pathExists(path.join(outputDir, iconPath));
+    
     // デフォルトオプションをマージ
     const defaultOptions: FeedOptions = {
       title: channel.label,
       description: `${channel.label} のポッドキャスト`,
       siteUrl: `https://www.youtube.com/channel/${channelId}`,
-      imageUrl: 'icon.jpg', // チャンネルのアイコンを設定
+      imageUrl: hasCustomIcon ? iconPath : 'icon.jpg', // チャンネル固有のアイコンがあれば使用
       author: channel.label,
       copyright: `Copyright ${new Date().getFullYear()} ${channel.label}`,
       language: 'ja',
@@ -258,7 +262,15 @@ export class FeedGenerator {
       
       // チャンネル情報を取得
       const channel = channelMap.get(entry.channelLabel);
-      const channelImageUrl = channel ? 'icon.jpg' : feedOptions.imageUrl!;
+      let channelImageUrl = feedOptions.imageUrl!;
+      
+      // チャンネル固有のアイコンがあれば使用
+      if (channel) {
+        const iconPath = path.join('icons', `${channel.slug}.jpg`);
+        if (await fs.pathExists(path.join(outputDir, iconPath))) {
+          channelImageUrl = iconPath;
+        }
+      }
       
       feed.addItem({
         title: entry.title, // チャンネル名を含めない

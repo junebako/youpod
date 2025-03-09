@@ -24,6 +24,13 @@ export interface VideoEntry {
   };
 }
 
+// チャンネルアイコン情報を格納するインターフェース
+export interface ChannelIcon {
+  url: string;
+  width: number;
+  height: number;
+}
+
 export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
   try {
     const response = await axios.get(feedUrl);
@@ -71,5 +78,57 @@ export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
   } catch (error) {
     console.error('YouTubeフィードの取得に失敗しました:', error);
     throw error;
+  }
+}
+
+/**
+ * YouTubeチャンネルのアイコン画像URLを取得する
+ * @param channelId YouTubeチャンネルID
+ * @returns チャンネルアイコン情報（サイズ別）
+ */
+export async function fetchChannelIcon(channelId: string): Promise<{
+  default: ChannelIcon;
+  medium: ChannelIcon;
+  high: ChannelIcon;
+} | null> {
+  try {
+    // チャンネルページのHTMLを取得
+    const response = await axios.get(`https://www.youtube.com/channel/${channelId}`);
+    const html = response.data;
+
+    // チャンネルアイコンURLを抽出するための正規表現
+    // YouTubeのHTMLからアイコン画像URLを抽出
+    const iconRegex = /"avatar":\s*{\s*"thumbnails":\s*\[\s*{\s*"url":\s*"([^"]+)"/;
+    const match = html.match(iconRegex);
+
+    if (!match || !match[1]) {
+      console.warn('チャンネルアイコンが見つかりませんでした:', channelId);
+      return null;
+    }
+
+    // 基本URLを取得（サイズパラメータを除去）
+    let baseUrl = match[1].replace(/=s\d+-c-k-c0x00ffffff-no-rj(-mo)?/, '');
+    
+    // 異なるサイズのアイコンURLを生成
+    return {
+      default: {
+        url: `${baseUrl}=s88-c-k-c0x00ffffff-no-rj`,
+        width: 88,
+        height: 88
+      },
+      medium: {
+        url: `${baseUrl}=s240-c-k-c0x00ffffff-no-rj`,
+        width: 240,
+        height: 240
+      },
+      high: {
+        url: `${baseUrl}=s800-c-k-c0x00ffffff-no-rj`,
+        width: 800,
+        height: 800
+      }
+    };
+  } catch (error) {
+    console.error('チャンネルアイコンの取得に失敗しました:', error);
+    return null;
   }
 } 

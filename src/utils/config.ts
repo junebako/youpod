@@ -7,6 +7,7 @@ export interface Channel {
   slug: string;
   feed_url: string;
   format: 'audio' | 'video';
+  iconUrl?: string; // チャンネルアイコンのURL
 }
 
 export interface R2Storage {
