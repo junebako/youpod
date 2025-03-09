@@ -14,12 +14,23 @@ interface AppOptions {
   skipDownload?: boolean;
   skipFeedGeneration?: boolean;
   feedOptions?: FeedOptions;
+  convertPaths?: boolean;
 }
 
 async function main() {
   try {
     // コマンドライン引数を解析
     const options = parseCommandLineArgs();
+    
+    // 履歴マネージャーを初期化
+    const historyManager = new HistoryManager();
+    
+    // 既存の履歴エントリのファイルパスを相対パスに変換
+    if (options.convertPaths) {
+      await historyManager.convertPathsToRelative();
+      console.log('履歴エントリのファイルパスを相対パスに変換しました');
+      return;
+    }
     
     // 設定ファイルを読み込む
     const config = await loadConfig();
@@ -28,9 +39,6 @@ async function main() {
     // 出力ディレクトリを作成
     const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
     await fs.ensureDir(outputBaseDir);
-    
-    // 履歴マネージャーを初期化
-    const historyManager = new HistoryManager();
     
     // 処理するチャンネルをフィルタリング
     const channelsToProcess = options.channelLabel 
@@ -154,6 +162,8 @@ function parseCommandLineArgs(): AppOptions {
     } else if (arg === '--feed-only') {
       options.skipDownload = true;
       options.skipFeedGeneration = false;
+    } else if (arg === '--convert-paths') {
+      options.convertPaths = true;
     }
   }
   

@@ -14,7 +14,8 @@
     "mp3": "ts-node src/index.ts --format mp3",
     "mp4": "ts-node src/index.ts --format mp4",
     "feed": "ts-node src/index.ts --feed-only",
-    "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ"
+    "feed:yancya": "ts-node src/index.ts --feed-only --channel やんちゃクラブ",
+    "convert-paths": "ts-node src/index.ts --convert-paths"
   },
   "dependencies": {
     "axios": "^1.6.2",

@@ -19,6 +19,16 @@ export interface FeedOptions {
 
 export class FeedGenerator {
   /**
+   * 相対パスを絶対パスに変換
+   */
+  private static toAbsolutePath(relativePath: string): string {
+    if (path.isAbsolute(relativePath)) {
+      return relativePath;
+    }
+    return path.join(process.cwd(), relativePath);
+  }
+
+  /**
    * XMLを整形する（シンプルな実装）
    */
   private static prettyXml(xml: string): string {
@@ -134,6 +144,9 @@ export class FeedGenerator {
       const fileExt = entry.format === 'mp3' ? 'mp3' : 'mp4';
       const fileUrl = `${entry.videoId}.${fileExt}`;
       
+      // 相対パスを絶対パスに変換
+      const absoluteFilePath = this.toAbsolutePath(entry.filePath);
+      
       feed.addItem({
         title: entry.title,
         description: entry.title,
@@ -142,7 +155,7 @@ export class FeedGenerator {
         date: new Date(entry.publishedAt),
         enclosure: {
           url: fileUrl,
-          file: entry.filePath,
+          file: absoluteFilePath,
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
         }
