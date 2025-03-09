@@ -74,7 +74,7 @@ async function main() {
         // 各動画をダウンロード
         const downloadOptions: DownloadOptions = {
           outputDir: channelDir,
-          format: options.format || 'mp3',
+          format: options.format || 'mp4',
           quality: 'best'
         };
         
