@@ -35,16 +35,6 @@ export class HistoryManager {
   }
 
   /**
-   * 相対パスを絶対パスに変換
-   */
-  private toAbsolutePath(relativePath: string): string {
-    if (path.isAbsolute(relativePath)) {
-      return relativePath;
-    }
-    return path.join(this.rootDir, relativePath);
-  }
-
-  /**
    * 履歴ファイルが存在することを確認し、なければ作成する（同期版）
    */
   private ensureHistoryFileSync(): void {
@@ -165,62 +155,5 @@ export class HistoryManager {
     ].join('\t');
     
     await fs.appendFile(this.historyFilePath, line + '\n');
-  }
-
-  /**
-   * 履歴ファイルを再生成する
-   */
-  public async regenerateHistoryFile(): Promise<void> {
-    // ヘッダー行を書き込む
-    const header = [
-      'channelLabel',
-      'videoId',
-      'title',
-      'filePath',
-      'fileSize',
-      'format',
-      'publishedAt',
-      'downloadedAt'
-    ].join('\t');
-    
-    let content = header + '\n';
-    
-    // 各エントリを追加
-    for (const entry of this.history.values()) {
-      const line = [
-        entry.channelLabel,
-        entry.videoId,
-        entry.title,
-        entry.filePath,
-        entry.fileSize,
-        entry.format,
-        entry.publishedAt,
-        entry.downloadedAt
-      ].join('\t');
-      
-      content += line + '\n';
-    }
-    
-    // ファイルに書き込む
-    await fs.writeFile(this.historyFilePath, content);
-    console.log('履歴ファイルを再生成しました');
-  }
-
-  /**
-   * 既存の履歴エントリのファイルパスを相対パスに変換する
-   */
-  public async convertPathsToRelative(): Promise<void> {
-    let updated = false;
-    
-    for (const [videoId, entry] of this.history.entries()) {
-      if (path.isAbsolute(entry.filePath)) {
-        entry.filePath = this.toRelativePath(entry.filePath);
-        updated = true;
-      }
-    }
-    
-    if (updated) {
-      await this.regenerateHistoryFile();
-    }
   }
 } 

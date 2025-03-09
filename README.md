@@ -64,9 +64,6 @@ npm run feed
 # 特定のチャンネル（やんちゃクラブ）のRSSフィードのみを生成
 npm run feed:yancya
 
-# 履歴エントリのファイルパスを相対パスに変換
-npm run convert-paths
-
 # カスタムオプションを指定して実行
 node dist/index.js --max 5 --format mp3 --channel "チャンネル名"
 ```
@@ -80,7 +77,6 @@ node dist/index.js --max 5 --format mp3 --channel "チャンネル名"
 - `--skip-download`: 動画のダウンロードをスキップ
 - `--skip-feed`: RSSフィードの生成をスキップ
 - `--feed-only`: 動画のダウンロードをスキップしてRSSフィードのみを生成
-- `--convert-paths`: 履歴エントリのファイルパスを相対パスに変換
 
 ## 設定
 
