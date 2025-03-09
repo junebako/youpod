@@ -175,6 +175,111 @@ export class FeedGenerator {
   }
   
   /**
+   * すべてのチャンネルの情報を含む統合フィードを生成する
+   */
+  public static async generateAllChannelsFeed(
+    channels: Channel[],
+    historyEntriesByChannel: Map<string, HistoryEntry[]>,
+    outputDir: string,
+    options: FeedOptions = {}
+  ): Promise<string> {
+    // 出力ディレクトリを確保
+    await fs.ensureDir(outputDir);
+    
+    // デフォルトオプションをマージ
+    const defaultOptions: FeedOptions = {
+      title: 'すべてのチャンネル',
+      description: 'すべてのYouTubeチャンネルのポッドキャスト',
+      siteUrl: 'https://example.com',
+      imageUrl: '',
+      author: 'YouPod',
+      copyright: `Copyright ${new Date().getFullYear()} YouPod`,
+      language: 'ja',
+      categories: ['Technology'],
+      explicit: false,
+      maxItems: 100
+    };
+    
+    const feedOptions = { ...defaultOptions, ...options };
+    
+    // ポッドキャストフィードを作成
+    const feed = new Podcast.Podcast({
+      title: feedOptions.title!,
+      description: feedOptions.description!,
+      feedUrl: `${feedOptions.siteUrl}/all-channels.xml`,
+      siteUrl: feedOptions.siteUrl!,
+      imageUrl: feedOptions.imageUrl!,
+      author: feedOptions.author!,
+      copyright: feedOptions.copyright!,
+      language: feedOptions.language!,
+      categories: feedOptions.categories!,
+      itunesAuthor: feedOptions.author!,
+      itunesSubtitle: feedOptions.description!,
+      itunesSummary: feedOptions.description!,
+      itunesExplicit: feedOptions.explicit!,
+      itunesOwner: {
+        name: feedOptions.author!,
+        email: 'noreply@example.com'
+      }
+    });
+    
+    // すべてのエントリを収集
+    const allEntries: HistoryEntry[] = [];
+    for (const channel of channels) {
+      const entries = historyEntriesByChannel.get(channel.label) || [];
+      // チャンネル名をタイトルに追加
+      const entriesWithChannelInfo = entries.map(entry => ({
+        ...entry,
+        title: `[${channel.label}] ${entry.title}`
+      }));
+      allEntries.push(...entriesWithChannelInfo);
+    }
+    
+    // エントリを日付順にソート（新しい順）
+    const sortedEntries = allEntries.sort(
+      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+    
+    // 最大アイテム数を制限
+    const limitedEntries = sortedEntries.slice(0, feedOptions.maxItems);
+    
+    // 各エントリをフィードに追加
+    for (const entry of limitedEntries) {
+      // ファイル名は動画IDだけを使用
+      const fileExt = entry.format === 'mp3' ? 'mp3' : 'mp4';
+      const fileUrl = `${entry.videoId}.${fileExt}`;
+      
+      // 相対パスを絶対パスに変換
+      const absoluteFilePath = this.toAbsolutePath(entry.filePath);
+      
+      feed.addItem({
+        title: entry.title,
+        description: entry.title,
+        url: `${feedOptions.siteUrl}/items/${entry.videoId}`,
+        guid: entry.videoId,
+        date: new Date(entry.publishedAt),
+        enclosure: {
+          url: fileUrl,
+          file: absoluteFilePath,
+          size: entry.fileSize,
+          type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
+        }
+      });
+    }
+    
+    // XMLを生成して整形
+    const xml = feed.buildXml();
+    const prettyXml = this.prettyXml(xml);
+    
+    // ファイルに保存
+    const outputPath = path.join(outputDir, 'all-channels.xml');
+    await fs.writeFile(outputPath, prettyXml);
+    
+    console.log(`統合RSSフィードを生成しました: ${outputPath}`);
+    return outputPath;
+  }
+  
+  /**
    * すべてのチャンネルのRSSフィードを生成する
    */
   public static async generateAllFeeds(
@@ -185,6 +290,7 @@ export class FeedGenerator {
   ): Promise<string[]> {
     const outputPaths: string[] = [];
     
+    // 各チャンネルのフィードを生成
     for (const channel of channels) {
       const entries = historyEntriesByChannel.get(channel.label) || [];
       if (entries.length === 0) {
@@ -195,6 +301,10 @@ export class FeedGenerator {
       const outputPath = await this.generateChannelFeed(channel, entries, outputDir, options);
       outputPaths.push(outputPath);
     }
+    
+    // すべてのチャンネルを含む統合フィードを生成
+    const allChannelsPath = await this.generateAllChannelsFeed(channels, historyEntriesByChannel, outputDir, options);
+    outputPaths.push(allChannelsPath);
     
     return outputPaths;
   }

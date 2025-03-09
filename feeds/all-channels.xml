@@ -2,13 +2,13 @@
 <rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:psc="http://podlove.org/simple-chapters" xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>
-      <![CDATA[やんちゃクラブ]]>
+      <![CDATA[すべてのチャンネル]]>
     </title>
     <description>
-      <![CDATA[やんちゃクラブ のポッドキャスト]]>
+      <![CDATA[すべてのYouTubeチャンネルのポッドキャスト]]>
     </description>
     <link>
-      https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag
+      https://example.com
     </link>
     <generator>
       Podcast for Node
@@ -16,12 +16,12 @@
     <lastBuildDate>
       Sun, 09 Mar 2025 07:25:08 GMT
     </lastBuildDate>
-    <atom:link href="https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/feed.xml" rel="self" type="application/rss+xml"/>
+    <atom:link href="https://example.com/all-channels.xml" rel="self" type="application/rss+xml"/>
     <author>
-      <![CDATA[やんちゃクラブ]]>
+      <![CDATA[YouPod]]>
     </author>
     <copyright>
-      <![CDATA[Copyright 2025 やんちゃクラブ]]>
+      <![CDATA[Copyright 2025 YouPod]]>
     </copyright>
     <language>
       <![CDATA[ja]]>
@@ -30,17 +30,17 @@
       <![CDATA[Technology]]>
     </category>
     <itunes:author>
-      やんちゃクラブ
+      YouPod
     </itunes:author>
     <itunes:subtitle>
-      やんちゃクラブ のポッドキャスト
+      すべてのYouTubeチャンネルのポッドキャスト
     </itunes:subtitle>
     <itunes:summary>
-      やんちゃクラブ のポッドキャスト
+      すべてのYouTubeチャンネルのポッドキャスト
     </itunes:summary>
     <itunes:owner>
       <itunes:name>
-        やんちゃクラブ
+        YouPod
       </itunes:name>
       <itunes:email>
         noreply@example.com
@@ -51,26 +51,26 @@
     </itunes:explicit>
     <item>
       <title>
-        <![CDATA[他人にボトルを任せるな]]>
+        <![CDATA[[やんちゃクラブ] 他人にボトルを任せるな]]>
       </title>
       <description>
-        <![CDATA[他人にボトルを任せるな]]>
+        <![CDATA[[やんちゃクラブ] 他人にボトルを任せるな]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/I31Alz-5SmA
+        https://example.com/items/I31Alz-5SmA
       </link>
       <guid isPermaLink="false">
         I31Alz-5SmA
       </guid>
       <dc:creator>
-        <![CDATA[やんちゃクラブ]]>
+        <![CDATA[YouPod]]>
       </dc:creator>
       <pubDate>
         Sat, 08 Mar 2025 12:21:46 GMT
       </pubDate>
       <enclosure url="I31Alz-5SmA.mp4" length="35750935" type="video/mp4"/>
       <itunes:summary>
-        他人にボトルを任せるな
+        [やんちゃクラブ] 他人にボトルを任せるな
       </itunes:summary>
       <itunes:explicit>
         false
@@ -78,26 +78,53 @@
     </item>
     <item>
       <title>
-        <![CDATA[やらないとやらんと]]>
+        <![CDATA[[モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！]]>
       </title>
       <description>
-        <![CDATA[やらないとやらんと]]>
+        <![CDATA[[モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/jDpFZzFLnds
+        https://example.com/items/UZxbUS78TTM
+      </link>
+      <guid isPermaLink="false">
+        UZxbUS78TTM
+      </guid>
+      <dc:creator>
+        <![CDATA[YouPod]]>
+      </dc:creator>
+      <pubDate>
+        Fri, 07 Mar 2025 15:00:46 GMT
+      </pubDate>
+      <enclosure url="UZxbUS78TTM.mp3" length="58557356" type="audio/mpeg"/>
+      <itunes:summary>
+        [モンゴルナイトフィーバー] 【251】ついに…科学の世界へ！！！！！！！
+      </itunes:summary>
+      <itunes:explicit>
+        false
+      </itunes:explicit>
+    </item>
+    <item>
+      <title>
+        <![CDATA[[やんちゃクラブ] やらないとやらんと]]>
+      </title>
+      <description>
+        <![CDATA[[やんちゃクラブ] やらないとやらんと]]>
+      </description>
+      <link>
+        https://example.com/items/jDpFZzFLnds
       </link>
       <guid isPermaLink="false">
         jDpFZzFLnds
       </guid>
       <dc:creator>
-        <![CDATA[やんちゃクラブ]]>
+        <![CDATA[YouPod]]>
       </dc:creator>
       <pubDate>
         Fri, 07 Mar 2025 08:17:01 GMT
       </pubDate>
       <enclosure url="jDpFZzFLnds.mp4" length="27248465" type="video/mp4"/>
       <itunes:summary>
-        やらないとやらんと
+        [やんちゃクラブ] やらないとやらんと
       </itunes:summary>
       <itunes:explicit>
         false
@@ -105,26 +132,26 @@
     </item>
     <item>
       <title>
-        <![CDATA[繰り上がり昇格すごい]]>
+        <![CDATA[[やんちゃクラブ] 繰り上がり昇格すごい]]>
       </title>
       <description>
-        <![CDATA[繰り上がり昇格すごい]]>
+        <![CDATA[[やんちゃクラブ] 繰り上がり昇格すごい]]>
       </description>
       <link>
-        https://www.youtube.com/channel/UCn3T1nqjGuC40r_agfyF0Ag/items/jkQHll4QN10
+        https://example.com/items/jkQHll4QN10
       </link>
       <guid isPermaLink="false">
         jkQHll4QN10
       </guid>
       <dc:creator>
-        <![CDATA[やんちゃクラブ]]>
+        <![CDATA[YouPod]]>
       </dc:creator>
       <pubDate>
         Thu, 06 Mar 2025 19:03:44 GMT
       </pubDate>
       <enclosure url="jkQHll4QN10.mp4" length="32576264" type="video/mp4"/>
       <itunes:summary>
-        繰り上がり昇格すごい
+        [やんちゃクラブ] 繰り上がり昇格すごい
       </itunes:summary>
       <itunes:explicit>
         false
