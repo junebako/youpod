@@ -42,3 +42,15 @@ coverage/
 
 # 設定ファイル（秘匿情報を含む）
 config.yml
+
+# 生成されたフィードファイル
+feeds/*.xml
+
+# ダウンロード履歴
+data/download_history.tsv
+
+# アイコン画像（バージョン管理から除外）
+feeds/icons/*.jpg
+feeds/icons/*.png
+# ただし、ディレクトリ自体は維持
+!feeds/icons/.gitkeep
