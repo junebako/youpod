@@ -13,6 +13,10 @@ export interface DownloadOptions {
   videoId?: string;
   title?: string;
   channelSlug?: string;
+  maxFileSize?: string; // 最大ファイルサイズ（例: '100M'）
+  maxHeight?: number;   // 最大解像度の高さ（例: 480）
+  maxBitrate?: number;     // 最大ビットレート（例: 500K）
+  qualityPreset?: 'low' | 'medium' | 'high'; // 品質プリセット
 }
 
 export interface DownloadResult {
@@ -70,10 +74,45 @@ export async function downloadVideo(
   // yt-dlpコマンドを構築
   let command = `yt-dlp "${videoUrl}" --no-progress`;
   
+  // 品質プリセットの設定
+  const qualityPreset = options.qualityPreset || 'medium';
+  let maxHeight: number;
+  let maxBitrate: string;
+  
+  // プリセットに基づいて解像度とビットレートを設定
+  switch (qualityPreset) {
+    case 'low':
+      maxHeight = options.maxHeight || 360;
+      maxBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '500K';
+      break;
+    case 'medium':
+      maxHeight = options.maxHeight || 480;
+      maxBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '1000K';
+      break;
+    case 'high':
+      maxHeight = options.maxHeight || 720;
+      maxBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '2000K';
+      break;
+    default:
+      maxHeight = options.maxHeight || 480;
+      maxBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '1000K';
+  }
+  
   if (format === 'mp3') {
-    command += ' -x --audio-format mp3 --audio-quality 0';
+    // 音声ファイルの場合はビットレートを制限
+    const audioBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '128K';
+    command += ` -x --audio-format mp3 --audio-quality ${audioBitrate}`;
   } else {
-    command += ` -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --recode mp4`;
+    // 動画ファイルの場合は解像度とビットレートを制限
+    command += ` -f "bestvideo[height<=${maxHeight}][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=${maxHeight}][vcodec^=avc]/best[height<=${maxHeight}]" --merge-output-format mp4`;
+    
+    // ビットレート制限を追加
+    command += ` --postprocessor-args "ffmpeg:-c:v libx264 -b:v ${maxBitrate} -maxrate ${maxBitrate} -bufsize ${maxBitrate} -preset medium -movflags +faststart"`;
+  }
+  
+  // ファイルサイズの上限を設定（オプション）
+  if (options.maxFileSize) {
+    command += ` --max-filesize ${options.maxFileSize}`;
   }
   
   command += ` -o "${outputFilePath}"`;
