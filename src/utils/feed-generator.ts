@@ -152,8 +152,8 @@ export class FeedGenerator {
     const xml = feed.buildXml();
     const prettyXml = this.prettyXml(xml);
     
-    // ファイルに保存
-    const outputPath = path.join(outputDir, `${channel.label}.xml`);
+    // ファイルに保存（slugを使用）
+    const outputPath = path.join(outputDir, `${channel.slug}.xml`);
     await fs.writeFile(outputPath, prettyXml);
     
     console.log(`RSSフィードを生成しました: ${outputPath}`);

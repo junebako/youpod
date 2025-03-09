@@ -48,8 +48,8 @@ async function main() {
       for (const channel of channelsToProcess) {
         console.log(`\n===== チャンネル: ${channel.label} =====`);
         
-        // チャンネル用のディレクトリを作成
-        const channelDir = path.join(outputBaseDir, channel.label);
+        // チャンネル用のディレクトリを作成（slugを使用）
+        const channelDir = path.join(outputBaseDir, channel.slug);
         await fs.ensureDir(channelDir);
         
         // フィードを取得
@@ -74,7 +74,8 @@ async function main() {
         // 各動画をダウンロード
         const downloadOptions: DownloadOptions = {
           outputDir: channelDir,
-          format: options.format || 'mp4',
+          // チャンネルのformatに基づいてファイル形式を決定
+          format: options.format || (channel.format === 'audio' ? 'mp3' : 'mp4'),
           quality: 'best'
         };
         
