@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
+import { Logger } from './logger';
 
 export interface VideoEntry {
   id: string;
@@ -46,7 +47,7 @@ export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
     const result = parser.parse(response.data);
     
     if (!result.feed || !result.feed.entry) {
-      console.warn('フィードにエントリーが見つかりませんでした:', feedUrl);
+      Logger.warn('フィードにエントリーが見つかりませんでした:', feedUrl);
       return [];
     }
     
@@ -76,7 +77,7 @@ export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
       };
     });
   } catch (error) {
-    console.error('YouTubeフィードの取得に失敗しました:', error);
+    Logger.error('YouTubeフィードの取得に失敗しました:', error);
     throw error;
   }
 }
@@ -102,7 +103,7 @@ export async function fetchChannelIcon(channelId: string): Promise<{
     const match = html.match(iconRegex);
 
     if (!match || !match[1]) {
-      console.warn('チャンネルアイコンが見つかりませんでした:', channelId);
+      Logger.warn('チャンネルアイコンが見つかりませんでした:', channelId);
       return null;
     }
 
@@ -128,7 +129,7 @@ export async function fetchChannelIcon(channelId: string): Promise<{
       }
     };
   } catch (error) {
-    console.error('チャンネルアイコンの取得に失敗しました:', error);
+    Logger.error('チャンネルアイコンの取得に失敗しました:', error);
     return null;
   }
 } 

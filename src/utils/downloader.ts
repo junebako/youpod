@@ -3,6 +3,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { VideoEntry } from './feed';
+import { Logger } from './logger';
 
 const execAsync = promisify(exec);
 
@@ -67,7 +68,7 @@ export async function downloadVideo(
   
   // すでにファイルが存在する場合はスキップ
   if (await fs.pathExists(outputFilePath)) {
-    console.log(`ファイルはすでに存在します: ${outputFileName}`);
+    Logger.log(`ファイルはすでに存在します: ${outputFileName}`);
     return outputFilePath;
   }
   
@@ -117,23 +118,23 @@ export async function downloadVideo(
   
   command += ` -o "${outputFilePath}"`;
   
-  console.log(`コマンドを実行: ${command}`);
+  Logger.log(`コマンドを実行: ${command}`);
   
   try {
     // コマンドを実行
     const { stdout, stderr } = await execAsync(command);
     
     if (stderr) {
-      console.warn(`警告: ${stderr}`);
+      Logger.warn(`警告: ${stderr}`);
     }
     
     // ファイルサイズを取得
     const stats = await fs.stat(outputFilePath);
-    console.log(`ダウンロード完了: ${outputFileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+    Logger.log(`ダウンロード完了: ${outputFileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
     
     return outputFilePath;
   } catch (error) {
-    console.error(`ダウンロード中にエラーが発生しました: ${error}`);
+    Logger.error(`ダウンロード中にエラーが発生しました: ${error}`);
     throw error;
   }
 } 

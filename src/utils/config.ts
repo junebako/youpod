@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import yaml from 'js-yaml';
 import path from 'path';
+import { Logger } from './logger';
 
 export interface Channel {
   label: string;
@@ -30,10 +31,10 @@ export async function loadConfig(configPath: string = 'config.yml'): Promise<Con
     
     // 設定ファイルが存在するか確認
     if (!await fs.pathExists(configFile)) {
-      console.error(`エラー: 設定ファイル ${configPath} が見つかりません。`);
-      console.error('config.example.yml をコピーして config.yml を作成してください:');
-      console.error('  cp config.example.yml config.yml');
-      console.error('その後、config.yml を編集して必要な情報を設定してください。');
+      Logger.error(`エラー: 設定ファイル ${configPath} が見つかりません。`);
+      Logger.error('config.example.yml をコピーして config.yml を作成してください:');
+      Logger.error('  cp config.example.yml config.yml');
+      Logger.error('その後、config.yml を編集して必要な情報を設定してください。');
       throw new Error(`設定ファイル ${configPath} が見つかりません`);
     }
     
@@ -78,13 +79,13 @@ export async function loadConfig(configPath: string = 'config.yml'): Promise<Con
       
       // 必須のR2設定が不足している場合は警告を表示
       if (!config.storage.account_id || !config.storage.access_key_id || !config.storage.secret_access_key) {
-        console.warn('警告: R2の認証情報が不完全です。アップロード機能は利用できません。');
+        Logger.warn('警告: R2の認証情報が不完全です。アップロード機能は利用できません。');
       }
     }
     
     return config;
   } catch (error) {
-    console.error('設定ファイルの読み込みに失敗しました:', error);
+    Logger.error('設定ファイルの読み込みに失敗しました:', error);
     throw error;
   }
 } 

@@ -3,6 +3,7 @@ import path from 'path';
 import * as Podcast from 'podcast';
 import { Channel } from './config';
 import { HistoryEntry } from './history';
+import { Logger } from './logger';
 
 export interface FeedOptions {
   title?: string;
@@ -195,7 +196,7 @@ export class FeedGenerator {
     const outputPath = path.join(outputDir, `${channel.slug}.xml`);
     await fs.writeFile(outputPath, prettyXml);
     
-    console.log(`RSSフィードを生成しました: ${outputPath}`);
+    Logger.log(`RSSフィードを生成しました: ${outputPath}`);
     return outputPath;
   }
   
@@ -323,7 +324,7 @@ export class FeedGenerator {
     const outputPath = path.join(outputDir, 'all-channels.xml');
     await fs.writeFile(outputPath, prettyXml);
     
-    console.log(`統合RSSフィードを生成しました: ${outputPath}`);
+    Logger.log(`統合RSSフィードを生成しました: ${outputPath}`);
     return outputPath;
   }
   
@@ -342,7 +343,7 @@ export class FeedGenerator {
     for (const channel of channels) {
       const entries = historyEntriesByChannel.get(channel.slug) || [];
       if (entries.length === 0) {
-        console.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
+        Logger.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
         continue;
       }
       

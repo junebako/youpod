@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { VideoEntry } from './feed';
 import { DownloadResult } from './downloader';
+import { Logger } from './logger';
 
 export interface HistoryEntry {
   channelLabel: string;
@@ -100,7 +101,7 @@ export class HistoryManager {
           try {
             description = Buffer.from(encodedDescription, 'base64').toString('utf-8');
           } catch (e) {
-            console.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
+            Logger.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
           }
         }
         
@@ -119,10 +120,9 @@ export class HistoryManager {
         this.history.set(videoId, entry);
       }
       
-      console.log(`${this.history.size}件のダウンロード履歴を読み込みました`);
+      Logger.log(`${this.history.size}件のダウンロード履歴を読み込みました`);
     } catch (error) {
-      console.error('履歴の読み込みに失敗しました:', error);
-      // エラーが発生しても処理を続行
+      Logger.error('履歴の読み込みに失敗しました:', error);
     }
   }
 
@@ -227,7 +227,7 @@ export class HistoryManager {
           try {
             description = Buffer.from(encodedDescription, 'base64').toString('utf-8');
           } catch (e) {
-            console.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
+            Logger.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
           }
         }
         
@@ -247,10 +247,10 @@ export class HistoryManager {
         }
       }
       
-      console.log(`チャンネル ${channelSlug} の履歴を ${entries.length} 件読み込みました`);
+      Logger.log(`チャンネル ${channelSlug} の履歴を ${entries.length} 件読み込みました`);
       return entries;
     } catch (error) {
-      console.error(`チャンネル ${channelSlug} の履歴読み込みに失敗しました:`, error);
+      Logger.error(`チャンネル ${channelSlug} の履歴読み込みに失敗しました:`, error);
       return [];
     }
   }
@@ -275,7 +275,8 @@ export class HistoryManager {
         const stats = await fs.stat(entry.filePath);
         fileSize = stats.size;
       } catch (error) {
-        console.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
+        Logger.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
+        fileSize = 0;
       }
       
       // ファイル形式を取得
@@ -322,7 +323,7 @@ export class HistoryManager {
         await fs.appendFile(historyFilePath, line + '\n');
       }
     } catch (error) {
-      console.error(`履歴への追加に失敗しました:`, error);
+      Logger.error(`履歴への追加に失敗しました:`, error);
       throw error;
     }
   }
