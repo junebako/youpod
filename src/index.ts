@@ -226,46 +226,58 @@ async function uploadToR2(config: any, options: AppOptions) {
         // チャンネルフィードをアップロード
         const channelFeedPath = path.join(process.cwd(), 'feeds', `${channel.slug}.xml`);
         if (await fs.pathExists(channelFeedPath)) {
-          await uploader.uploadFile(
-            channelFeedPath, 
-            `podcasts/${channel.slug}/feed.xml`, 
-            'application/xml'
-          );
-          console.log(`チャンネル "${channel.label}" のフィードをアップロードしました`);
+          try {
+            await uploader.uploadFile(
+              channelFeedPath, 
+              `podcasts/${channel.slug}/feed.xml`, 
+              'application/xml'
+            );
+          } catch (error) {
+            console.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
+          }
         }
         
         // チャンネルアイコンをアップロード
         const channelIconPath = path.join(process.cwd(), 'feeds', 'icons', `${channel.slug}.jpg`);
         if (await fs.pathExists(channelIconPath)) {
-          await uploader.uploadFile(
-            channelIconPath, 
-            `podcasts/${channel.slug}/icon.jpg`, 
-            'image/jpeg'
-          );
-          console.log(`チャンネル "${channel.label}" のアイコンをアップロードしました`);
+          try {
+            await uploader.uploadFile(
+              channelIconPath, 
+              `podcasts/${channel.slug}/icon.jpg`, 
+              'image/jpeg'
+            );
+          } catch (error) {
+            console.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
+          }
         }
       }
       
       // 統合フィードをアップロード
       const allChannelsFeedPath = path.join(process.cwd(), 'feeds', 'all-channels.xml');
       if (await fs.pathExists(allChannelsFeedPath)) {
-        await uploader.uploadFile(
-          allChannelsFeedPath, 
-          'podcasts/all/feed.xml', 
-          'application/xml'
-        );
-        console.log('統合フィードをアップロードしました');
+        try {
+          await uploader.uploadFile(
+            allChannelsFeedPath, 
+            'podcasts/all/feed.xml', 
+            'application/xml'
+          );
+        } catch (error) {
+          console.error('統合フィードのアップロードに失敗しました:', error);
+        }
       }
       
       // 統合アイコンをアップロード
       const mainIconPath = path.join(process.cwd(), 'feeds', 'icon.jpg');
       if (await fs.pathExists(mainIconPath)) {
-        await uploader.uploadFile(
-          mainIconPath, 
-          'podcasts/all/icon.jpg', 
-          'image/jpeg'
-        );
-        console.log('統合アイコンをアップロードしました');
+        try {
+          await uploader.uploadFile(
+            mainIconPath, 
+            'podcasts/all/icon.jpg', 
+            'image/jpeg'
+          );
+        } catch (error) {
+          console.error('統合アイコンのアップロードに失敗しました:', error);
+        }
       }
       
       // 公開URLを表示
@@ -319,7 +331,6 @@ async function uploadToR2(config: any, options: AppOptions) {
             `podcasts/${channel.slug}/feed.xml`, 
             'application/xml'
           );
-          console.log(`チャンネル "${channel.label}" のフィードをアップロードしました`);
         } catch (error) {
           console.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
         }
@@ -334,7 +345,6 @@ async function uploadToR2(config: any, options: AppOptions) {
             `podcasts/${channel.slug}/icon.jpg`, 
             'image/jpeg'
           );
-          console.log(`チャンネル "${channel.label}" のアイコンをアップロードしました`);
         } catch (error) {
           console.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
         }
@@ -350,7 +360,6 @@ async function uploadToR2(config: any, options: AppOptions) {
           'podcasts/all/feed.xml', 
           'application/xml'
         );
-        console.log('統合フィードをアップロードしました');
       } catch (error) {
         console.error('統合フィードのアップロードに失敗しました:', error);
       }
@@ -365,7 +374,6 @@ async function uploadToR2(config: any, options: AppOptions) {
           'podcasts/all/icon.jpg', 
           'image/jpeg'
         );
-        console.log('統合アイコンをアップロードしました');
       } catch (error) {
         console.error('統合アイコンのアップロードに失敗しました:', error);
       }

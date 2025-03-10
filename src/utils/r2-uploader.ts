@@ -17,6 +17,8 @@ export class R2Uploader {
   private bucketName: string;
   private skipBucketCheck: boolean;
   private skipExistingFiles: boolean;
+  private skippedFiles: number = 0;
+  private uploadedFiles: number = 0;
 
   constructor(config: R2Config) {
     this.bucketName = config.bucketName;
@@ -30,6 +32,8 @@ export class R2Uploader {
     });
     this.skipBucketCheck = config.skipBucketCheck || false;
     this.skipExistingFiles = config.skipExistingFiles || false;
+    this.skippedFiles = 0;
+    this.uploadedFiles = 0;
   }
 
   /**
@@ -91,9 +95,10 @@ export class R2Uploader {
           // ローカルファイルのMD5ハッシュを計算
           const localMD5 = await this.calculateMD5(filePath);
           
-          // ハッシュが一致する場合はアップロードをスキップ
+          // ハッシュが一致する場合（同じ内容のファイル）、アップロードをスキップ
           if (remoteETag === localMD5) {
-            console.log(`ファイル "${key}" は既に存在し、内容が同じなのでスキップします`);
+            // スキップカウントを増やす
+            this.skippedFiles++;
             return `https://${this.bucketName}.r2.dev/${key}`;
           }
         }
@@ -121,6 +126,12 @@ export class R2Uploader {
 
       await this.client.send(command);
       
+      // アップロードカウントを増やす
+      this.uploadedFiles++;
+      
+      // 新規ファイルのアップロードのみログに表示
+      console.log(`ファイル "${key}" をアップロードしました`);
+      
       // パブリックURLを返す（r2.devドメインを使用）
       return `https://${this.bucketName}.r2.dev/${key}`;
     } catch (error) {
@@ -136,9 +147,12 @@ export class R2Uploader {
    */
   async uploadDirectory(dirPath: string, prefix: string = ''): Promise<string[]> {
     try {
+      // スキップカウントとアップロードカウントをリセット
+      this.skippedFiles = 0;
+      this.uploadedFiles = 0;
+      
       const files = await fs.readdir(dirPath);
       const uploadedUrls: string[] = [];
-      let skippedCount = 0;
 
       for (const file of files) {
         const filePath = path.join(dirPath, file);
@@ -153,6 +167,11 @@ export class R2Uploader {
         }
       }
 
+      // 処理結果のサマリーを表示
+      if (this.skippedFiles > 0) {
+        console.log(`${this.skippedFiles}個のファイルが既に存在し、内容が同じなのでスキップしました`);
+      }
+      
       return uploadedUrls;
     } catch (error) {
       console.error(`ディレクトリのアップロードに失敗しました: ${error}`);
