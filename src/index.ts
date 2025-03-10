@@ -57,7 +57,9 @@ async function main() {
       
       // 各チャンネルを処理
       for (const channel of channelsToProcess) {
-        Logger.log(`\n===== チャンネル: ${channel.label} =====`);
+        // 空行を追加してからログを出力
+        console.log('');
+        Logger.log(`===== チャンネル: ${channel.label} =====`);
         
         // チャンネルの出力ディレクトリを作成
         const channelDir = path.join(outputBaseDir, channel.slug);
@@ -118,7 +120,9 @@ async function main() {
     // フィード生成処理
     const shouldGenerateFeed = options.feedOnly || options.all || (!options.downloadOnly && !options.uploadOnly);
     if (shouldGenerateFeed) {
-      Logger.log('\n===== RSSフィードを生成 =====');
+      // 空行を追加してからログを出力
+      console.log('');
+      Logger.log(`===== RSSフィードを生成 =====`);
       
       // フィードディレクトリを作成
       const feedDir = path.join(process.cwd(), 'feeds');
@@ -199,7 +203,9 @@ async function uploadToR2(config: any, options: AppOptions) {
   }
   
   try {
-    Logger.log('\n===== Cloudflare R2にアップロード =====');
+    // 空行を追加してからログを出力
+    console.log('');
+    Logger.log(`===== Cloudflare R2にアップロード =====`);
     
     // R2アップローダーを初期化
     const uploader = new R2Uploader({
