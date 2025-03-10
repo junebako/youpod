@@ -206,7 +206,8 @@ async function uploadToR2(config: any, options: AppOptions) {
       accessKeyId: config.storage.access_key_id,
       secretAccessKey: config.storage.secret_access_key,
       bucketName: config.storage.bucket,
-      skipBucketCheck: true // バケットの存在確認をスキップ
+      skipBucketCheck: true, // バケットの存在確認をスキップ
+      skipExistingFiles: true // 既存ファイルのアップロードをスキップ
     });
     
     // バケットの存在を確認

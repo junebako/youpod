@@ -1,6 +1,7 @@
-import { S3Client, PutObjectCommand, ListBucketsCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ListBucketsCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs-extra';
 import path from 'path';
+import crypto from 'crypto';
 
 export interface R2Config {
   accountId: string;
@@ -8,12 +9,14 @@ export interface R2Config {
   secretAccessKey: string;
   bucketName: string;
   skipBucketCheck?: boolean;  // バケットの存在確認をスキップするオプション
+  skipExistingFiles?: boolean; // 既存ファイルのアップロードをスキップするオプション
 }
 
 export class R2Uploader {
   private client: S3Client;
   private bucketName: string;
   private skipBucketCheck: boolean;
+  private skipExistingFiles: boolean;
 
   constructor(config: R2Config) {
     this.bucketName = config.bucketName;
@@ -26,6 +29,50 @@ export class R2Uploader {
       },
     });
     this.skipBucketCheck = config.skipBucketCheck || false;
+    this.skipExistingFiles = config.skipExistingFiles || false;
+  }
+
+  /**
+   * ファイルのMD5ハッシュを計算する
+   * @param filePath ファイルパス
+   */
+  private async calculateMD5(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const hash = crypto.createHash('md5');
+      const stream = fs.createReadStream(filePath);
+      
+      stream.on('data', (data) => {
+        hash.update(data);
+      });
+      
+      stream.on('end', () => {
+        resolve(hash.digest('hex'));
+      });
+      
+      stream.on('error', (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  /**
+   * R2上のファイルが存在するか確認し、存在する場合はMD5ハッシュを取得
+   * @param key R2内のキー（ファイル名）
+   */
+  private async checkFileExists(key: string): Promise<string | null> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      
+      const response = await this.client.send(command);
+      // ETagはダブルクォーテーションで囲まれているので、それを取り除く
+      return response.ETag ? response.ETag.replace(/"/g, '') : null;
+    } catch (error) {
+      // ファイルが存在しない場合はnullを返す
+      return null;
+    }
   }
 
   /**
@@ -36,6 +83,22 @@ export class R2Uploader {
    */
   async uploadFile(filePath: string, key: string, contentType?: string): Promise<string> {
     try {
+      // 既存ファイルのスキップが有効で、ファイルが存在する場合
+      if (this.skipExistingFiles) {
+        const remoteETag = await this.checkFileExists(key);
+        
+        if (remoteETag) {
+          // ローカルファイルのMD5ハッシュを計算
+          const localMD5 = await this.calculateMD5(filePath);
+          
+          // ハッシュが一致する場合はアップロードをスキップ
+          if (remoteETag === localMD5) {
+            console.log(`ファイル "${key}" は既に存在し、内容が同じなのでスキップします`);
+            return `https://${this.bucketName}.r2.dev/${key}`;
+          }
+        }
+      }
+      
       const fileContent = await fs.readFile(filePath);
       
       // コンテンツタイプが指定されていない場合、ファイル拡張子から推測
@@ -75,6 +138,7 @@ export class R2Uploader {
     try {
       const files = await fs.readdir(dirPath);
       const uploadedUrls: string[] = [];
+      let skippedCount = 0;
 
       for (const file of files) {
         const filePath = path.join(dirPath, file);
@@ -82,6 +146,8 @@ export class R2Uploader {
 
         if (stats.isFile()) {
           const key = prefix ? `${prefix}/${file}` : file;
+          
+          // uploadFileメソッド内でスキップ処理が行われる
           const url = await this.uploadFile(filePath, key);
           uploadedUrls.push(url);
         }
