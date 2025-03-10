@@ -127,7 +127,7 @@ export class FeedGenerator {
     const feed = new Podcast.Podcast({
       title: feedOptions.title!,
       description: feedOptions.description!,
-      feedUrl: `${feedOptions.siteUrl}/feed.xml`,
+      feedUrl: `${feedOptions.baseUrl ? feedOptions.baseUrl + '/podcasts/' + channel.slug + '/feed.xml' : feedOptions.siteUrl + '/feed.xml'}`,
       siteUrl: feedOptions.siteUrl!,
       imageUrl: absoluteImageUrl,
       author: feedOptions.author!,
@@ -213,9 +213,9 @@ export class FeedGenerator {
     
     // デフォルトオプションをマージ
     const defaultOptions: FeedOptions = {
-      title: 'すべてのチャンネル',
-      description: 'すべてのYouTubeチャンネルのポッドキャスト',
-      siteUrl: 'https://example.com',
+      title: 'YouPod',
+      description: 'YouTubeをビデオポッドキャストに',
+      siteUrl: 'https://juneboku.xyz',
       imageUrl: 'icon.jpg', // チャンネルのアイコンを設定
       author: 'YouPod',
       copyright: `Copyright ${new Date().getFullYear()} YouPod`,
@@ -237,7 +237,7 @@ export class FeedGenerator {
     const feed = new Podcast.Podcast({
       title: feedOptions.title!,
       description: feedOptions.description!,
-      feedUrl: `${feedOptions.siteUrl}/all-channels.xml`,
+      feedUrl: `${feedOptions.siteUrl}/podcasts/all/feed.xml`,
       siteUrl: feedOptions.siteUrl!,
       imageUrl: absoluteImageUrl,
       author: feedOptions.author!,
