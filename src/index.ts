@@ -6,6 +6,7 @@ import { HistoryManager, HistoryEntry } from './utils/history';
 import { FeedGenerator, FeedOptions } from './utils/feed-generator';
 import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { R2Uploader } from './utils/r2-uploader';
+import { Logger } from './utils/logger';
 
 interface AppOptions {
   maxVideos?: number;
@@ -24,7 +25,7 @@ async function main() {
   try {
     // 設定ファイルを読み込む
     const config = await loadConfig();
-    console.log(`${config.channels.length}個のチャンネルが設定されています`);
+    Logger.log(`${config.channels.length}個のチャンネルが設定されています`);
     
     // コマンドライン引数を解析
     const options = parseCommandLineArgs();
@@ -49,14 +50,14 @@ async function main() {
           channel.label.toLowerCase() === options.channelLabel!.toLowerCase());
         
         if (channelsToProcess.length === 0) {
-          console.error(`チャンネル "${options.channelLabel}" が見つかりません。`);
+          Logger.error(`チャンネル "${options.channelLabel}" が見つかりません。`);
           return;
         }
       }
       
       // 各チャンネルを処理
       for (const channel of channelsToProcess) {
-        console.log(`\n===== チャンネル: ${channel.label} =====`);
+        Logger.log(`\n===== チャンネル: ${channel.label} =====`);
         
         // チャンネルの出力ディレクトリを作成
         const channelDir = path.join(outputBaseDir, channel.slug);
@@ -64,11 +65,11 @@ async function main() {
         
         // YouTubeフィードを取得
         const videos = await fetchYouTubeFeed(channel.feed_url);
-        console.log(`${videos.length}個の動画が見つかりました`);
+        Logger.log(`${videos.length}個の動画が見つかりました`);
         
         // 履歴を読み込み
         const history = await historyManager.loadHistory(channel.slug);
-        console.log(`チャンネル ${channel.slug} の履歴を ${history.length} 件読み込みました`);
+        Logger.log(`チャンネル ${channel.slug} の履歴を ${history.length} 件読み込みました`);
         
         // 新しい動画を特定
         const existingVideoIds = new Set(history.map(entry => entry.videoId));
@@ -76,11 +77,11 @@ async function main() {
         
         // 最大ダウンロード数を制限
         const videosToDownload = newVideos.slice(0, options.maxVideos);
-        console.log(`うち${videosToDownload.length}個が新しい動画です\n`);
+        Logger.log(`うち${videosToDownload.length}個が新しい動画です\n`);
         
         // 各動画をダウンロード
         for (const video of videosToDownload) {
-          console.log(`\n動画をダウンロード中: ${video.title}`);
+          Logger.log(`\n動画をダウンロード中: ${video.title}`);
 
           const downloadOptions: DownloadOptions = {
             format: channel.format === 'audio' || options.format === 'mp3' ? 'mp3' : 'mp4',
@@ -106,9 +107,9 @@ async function main() {
               description: video.mediaGroup?.description // YouTubeの説明文を保存
             });
 
-            console.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
+            Logger.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
-            console.error(`ダウンロード失敗: ${error}`);
+            Logger.error(`ダウンロード失敗: ${error}`);
           }
         }
       }
@@ -117,7 +118,7 @@ async function main() {
     // フィード生成処理
     const shouldGenerateFeed = options.feedOnly || options.all || (!options.downloadOnly && !options.uploadOnly);
     if (shouldGenerateFeed) {
-      console.log('\n===== RSSフィードを生成 =====');
+      Logger.log('\n===== RSSフィードを生成 =====');
       
       // フィードディレクトリを作成
       const feedDir = path.join(process.cwd(), 'feeds');
@@ -147,7 +148,7 @@ async function main() {
           
           historyEntriesByChannel.set(channel.slug, historyEntries);
         } else {
-          console.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
+          Logger.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
         }
       }
       
@@ -173,7 +174,7 @@ async function main() {
         feedOptions
       );
       
-      console.log(`${feedFiles.length}個のRSSフィードを生成しました`);
+      Logger.log(`${feedFiles.length}個のRSSフィードを生成しました`);
     }
     
     // アップロード処理
@@ -183,7 +184,7 @@ async function main() {
     }
     
   } catch (error) {
-    console.error('エラーが発生しました:', error);
+    Logger.error('エラーが発生しました:', error);
     process.exit(1);
   }
 }
@@ -193,12 +194,12 @@ async function main() {
  */
 async function uploadToR2(config: any, options: AppOptions) {
   if (!config.storage || config.storage.type !== 'r2') {
-    console.error('R2ストレージの設定が見つかりません。アップロードをスキップします。');
+    Logger.error('R2ストレージの設定が見つかりません。アップロードをスキップします。');
     return;
   }
   
   try {
-    console.log('\n===== Cloudflare R2にアップロード =====');
+    Logger.log('\n===== Cloudflare R2にアップロード =====');
     
     // R2アップローダーを初期化
     const uploader = new R2Uploader({
@@ -213,13 +214,13 @@ async function uploadToR2(config: any, options: AppOptions) {
     // バケットの存在を確認
     // const bucketExists = await uploader.checkBucket();
     if (false) {
-      console.error(`バケット "${config.storage.bucket}" が存在しません。`);
+      Logger.error(`バケット "${config.storage.bucket}" が存在しません。`);
       return;
     }
     
     // フィードのみをアップロードする場合
     if (options.feedOnly) {
-      console.log('フィードファイルをアップロード中...');
+      Logger.log('フィードファイルをアップロード中...');
       
       // 各チャンネルのフィードをアップロード
       for (const channel of config.channels) {
@@ -233,7 +234,7 @@ async function uploadToR2(config: any, options: AppOptions) {
               'application/xml'
             );
           } catch (error) {
-            console.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
+            Logger.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
           }
         }
         
@@ -247,7 +248,7 @@ async function uploadToR2(config: any, options: AppOptions) {
               'image/jpeg'
             );
           } catch (error) {
-            console.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
+            Logger.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
           }
         }
       }
@@ -262,7 +263,7 @@ async function uploadToR2(config: any, options: AppOptions) {
             'application/xml'
           );
         } catch (error) {
-          console.error('統合フィードのアップロードに失敗しました:', error);
+          Logger.error('統合フィードのアップロードに失敗しました:', error);
         }
       }
       
@@ -276,25 +277,25 @@ async function uploadToR2(config: any, options: AppOptions) {
             'image/jpeg'
           );
         } catch (error) {
-          console.error('統合アイコンのアップロードに失敗しました:', error);
+          Logger.error('統合アイコンのアップロードに失敗しました:', error);
         }
       }
       
       // 公開URLを表示
       const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
-      console.log('\n===== ポッドキャストフィードURL =====');
+      Logger.log('\n===== ポッドキャストフィードURL =====');
       
       for (const channel of config.channels) {
-        console.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
+        Logger.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
       }
       
-      console.log(`統合フィード: ${baseUrl}/podcasts/all/feed.xml`);
+      Logger.log(`統合フィード: ${baseUrl}/podcasts/all/feed.xml`);
       
       return;
     }
     
     // すべてのファイルをアップロード
-    console.log('ダウンロードしたファイルをアップロード中...');
+    Logger.log('ダウンロードしたファイルをアップロード中...');
     
     // 各チャンネルのディレクトリをアップロード
     const outputBaseDir = options.outputDir || path.join(process.cwd(), 'downloads');
@@ -304,21 +305,21 @@ async function uploadToR2(config: any, options: AppOptions) {
       const channelDir = path.join(outputBaseDir, channel.slug);
       if (await fs.pathExists(channelDir)) {
         const files = await fs.readdir(channelDir);
-        console.log(`チャンネル "${channel.label}" の${files.length}個のファイルをアップロード中...`);
+        Logger.log(`チャンネル "${channel.label}" の${files.length}個のファイルをアップロード中...`);
         
         try {
           const uploadedUrls = await uploader.uploadDirectory(channelDir, `podcasts/${channel.slug}/media`);
           totalUploaded += uploadedUrls.length;
         } catch (error) {
-          console.error(`チャンネル "${channel.label}" のメディアファイルのアップロードに失敗しました:`, error);
+          Logger.error(`チャンネル "${channel.label}" のメディアファイルのアップロードに失敗しました:`, error);
         }
       }
     }
     
-    console.log(`${totalUploaded}個のメディアファイルをアップロードしました`);
+    Logger.log(`${totalUploaded}個のメディアファイルをアップロードしました`);
     
     // フィードもアップロード
-    console.log('フィードファイルをアップロード中...');
+    Logger.log('フィードファイルをアップロード中...');
     
     // 各チャンネルのフィードをアップロード
     for (const channel of config.channels) {
@@ -332,7 +333,7 @@ async function uploadToR2(config: any, options: AppOptions) {
             'application/xml'
           );
         } catch (error) {
-          console.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
+          Logger.error(`チャンネル "${channel.label}" のフィードのアップロードに失敗しました:`, error);
         }
       }
       
@@ -346,7 +347,7 @@ async function uploadToR2(config: any, options: AppOptions) {
             'image/jpeg'
           );
         } catch (error) {
-          console.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
+          Logger.error(`チャンネル "${channel.label}" のアイコンのアップロードに失敗しました:`, error);
         }
       }
     }
@@ -361,7 +362,7 @@ async function uploadToR2(config: any, options: AppOptions) {
           'application/xml'
         );
       } catch (error) {
-        console.error('統合フィードのアップロードに失敗しました:', error);
+        Logger.error('統合フィードのアップロードに失敗しました:', error);
       }
     }
     
@@ -375,22 +376,22 @@ async function uploadToR2(config: any, options: AppOptions) {
           'image/jpeg'
         );
       } catch (error) {
-        console.error('統合アイコンのアップロードに失敗しました:', error);
+        Logger.error('統合アイコンのアップロードに失敗しました:', error);
       }
     }
     
     // 公開URLを表示
     const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
-    console.log('\n===== ポッドキャストフィードURL =====');
+    Logger.log('\n===== ポッドキャストフィードURL =====');
     
     for (const channel of config.channels) {
-      console.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
+      Logger.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
     }
     
-    console.log(`統合フィード: ${baseUrl}/podcasts/all/feed.xml`);
+    Logger.log(`統合フィード: ${baseUrl}/podcasts/all/feed.xml`);
     
   } catch (error) {
-    console.error('アップロード中にエラーが発生しました:', error);
+    Logger.error('アップロード中にエラーが発生しました:', error);
   }
 }
 
@@ -398,7 +399,7 @@ async function uploadToR2(config: any, options: AppOptions) {
  * チャンネルアイコンを取得する
  */
 async function fetchChannelIcons(channels: Channel[]) {
-  console.log('チャンネルアイコンを取得しています...');
+  Logger.log('チャンネルアイコンを取得しています...');
   
   // アイコン保存ディレクトリを作成
   const iconDir = path.join(process.cwd(), 'feeds', 'icons');
@@ -425,11 +426,11 @@ async function fetchChannelIcons(channels: Channel[]) {
         const iconUrl = iconInfo.medium.url;
         // アイコンを保存
         await downloadChannelIcon(iconUrl, iconPath);
-        console.log(`チャンネル "${channel.label}" のアイコンを取得しました: ${iconUrl}`);
-        console.log(`チャンネルアイコンを保存しました: ${iconPath}`);
+        Logger.log(`チャンネル "${channel.label}" のアイコンを取得しました: ${iconUrl}`);
+        Logger.log(`チャンネルアイコンを保存しました: ${iconPath}`);
       }
     } catch (error) {
-      console.error(`チャンネル "${channel.label}" のアイコン取得に失敗しました:`, error);
+      Logger.error(`チャンネル "${channel.label}" のアイコン取得に失敗しました:`, error);
     }
   }
 }
@@ -489,6 +490,6 @@ function parseCommandLineArgs(): AppOptions {
 
 // メイン処理を実行
 main().catch(error => {
-  console.error('予期しないエラーが発生しました:', error);
+  Logger.error('予期しないエラーが発生しました:', error);
   process.exit(1);
 }); 
