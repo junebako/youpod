@@ -217,8 +217,19 @@ export class HistoryManager {
           fileSize,
           format,
           publishedAt,
-          downloadedAt
+          downloadedAt,
+          encodedDescription
         ] = line.split('\t');
+        
+        // Base64エンコードされた説明文をデコード
+        let description: string | undefined;
+        if (encodedDescription) {
+          try {
+            description = Buffer.from(encodedDescription, 'base64').toString('utf-8');
+          } catch (e) {
+            console.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
+          }
+        }
         
         // 指定されたチャンネルスラグに関連するエントリのみを追加
         // ファイルパスにチャンネルスラグが含まれているかどうかで判断
@@ -230,7 +241,8 @@ export class HistoryManager {
             publishDate: publishedAt,
             downloadDate: downloadedAt,
             filePath,
-            channelLabel
+            channelLabel,
+            description
           });
         }
       }

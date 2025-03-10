@@ -140,7 +140,8 @@ async function main() {
               fileSize: fs.existsSync(entry.filePath) ? fs.statSync(entry.filePath).size : 0,
               format: path.extname(entry.filePath).replace('.', ''),
               publishedAt: entry.publishDate,
-              downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString()
+              downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString(),
+              description: entry.description
             };
           });
           
