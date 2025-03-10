@@ -83,7 +83,7 @@ async function main() {
 
         // 各動画をダウンロード
         for (const video of videosToDownload) {
-          Logger.log(`\n動画をダウンロード中: ${video.title}`);
+          Logger.log(`動画をダウンロード中: ${video.title}`);
 
           const downloadOptions: DownloadOptions = {
             format: channel.format === 'audio' || options.format === 'mp3' ? 'mp3' : 'mp4',
