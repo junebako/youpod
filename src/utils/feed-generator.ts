@@ -172,7 +172,7 @@ export class FeedGenerator {
       
       feed.addItem({
         title: entry.title, // チャンネル名を含めない
-        description: entry.title,
+        description: entry.description || entry.title, // YouTubeの説明文があれば使用、なければタイトルを使用
         url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
         guid: entry.videoId,
         date: new Date(entry.publishedAt),
@@ -182,7 +182,8 @@ export class FeedGenerator {
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
         },
-        itunesImage: itunesImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesImage: itunesImageUrl, // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesSummary: entry.description || entry.title // iTunes用のサマリーにも説明文を設定
       });
     }
     
@@ -299,7 +300,7 @@ export class FeedGenerator {
       
       feed.addItem({
         title: entry.title, // チャンネル名を含めない
-        description: entry.title,
+        description: entry.description || entry.title, // YouTubeの説明文があれば使用、なければタイトルを使用
         url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
         guid: entry.videoId,
         date: new Date(entry.publishedAt),
@@ -309,7 +310,8 @@ export class FeedGenerator {
           size: entry.fileSize,
           type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
         },
-        itunesImage: itunesImageUrl // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesImage: itunesImageUrl, // アイテムのアイコンにチャンネルのアイコンを設定
+        itunesSummary: entry.description || entry.title // iTunes用のサマリーにも説明文を設定
       });
     }
     

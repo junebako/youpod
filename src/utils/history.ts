@@ -12,6 +12,7 @@ export interface HistoryEntry {
   format: string;
   publishedAt: string;
   downloadedAt: string;
+  description?: string;
 }
 
 export interface SimpleHistoryEntry {
@@ -22,6 +23,7 @@ export interface SimpleHistoryEntry {
   downloadDate: Date | string;
   filePath: string;
   channelLabel?: string;
+  description?: string;
 }
 
 export class HistoryManager {
@@ -88,8 +90,19 @@ export class HistoryManager {
           fileSize,
           format,
           publishedAt,
-          downloadedAt
+          downloadedAt,
+          encodedDescription
         ] = line.split('\t');
+        
+        // Base64エンコードされた説明文をデコード
+        let description: string | undefined;
+        if (encodedDescription) {
+          try {
+            description = Buffer.from(encodedDescription, 'base64').toString('utf-8');
+          } catch (e) {
+            console.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
+          }
+        }
         
         const entry: HistoryEntry = {
           channelLabel,
@@ -99,7 +112,8 @@ export class HistoryManager {
           fileSize: parseInt(fileSize, 10),
           format,
           publishedAt,
-          downloadedAt
+          downloadedAt,
+          description
         };
         
         this.history.set(videoId, entry);
@@ -267,7 +281,8 @@ export class HistoryManager {
         fileSize,
         format,
         publishedAt: entry.publishDate,
-        downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString()
+        downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString(),
+        description: entry.description
       };
       
       // 既存のエントリを確認
@@ -279,6 +294,7 @@ export class HistoryManager {
         this.history.set(entry.videoId, newEntry);
         
         // ファイルに追加
+        const encodedDescription = newEntry.description ? Buffer.from(newEntry.description).toString('base64') : '';
         const line = [
           newEntry.channelLabel,
           newEntry.videoId,
@@ -287,7 +303,8 @@ export class HistoryManager {
           newEntry.fileSize,
           newEntry.format,
           newEntry.publishedAt,
-          newEntry.downloadedAt
+          newEntry.downloadedAt,
+          encodedDescription // Base64エンコードされた説明文
         ].join('\t');
         
         await fs.appendFile(historyFilePath, line + '\n');

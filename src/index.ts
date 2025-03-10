@@ -102,7 +102,8 @@ async function main() {
               publishDate: video.publishDate,
               downloadDate: new Date(),
               filePath: downloadedFile,
-              channelLabel: channel.label
+              channelLabel: channel.label,
+              description: video.mediaGroup?.description // YouTubeの説明文を保存
             });
 
             console.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
