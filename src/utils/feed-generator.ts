@@ -237,7 +237,7 @@ export class FeedGenerator {
     const feed = new Podcast.Podcast({
       title: feedOptions.title!,
       description: feedOptions.description!,
-      feedUrl: `${feedOptions.siteUrl}/podcasts/all/feed.xml`,
+      feedUrl: `${feedOptions.baseUrl}/podcasts/all/feed.xml`,
       siteUrl: feedOptions.siteUrl!,
       imageUrl: absoluteImageUrl,
       author: feedOptions.author!,
