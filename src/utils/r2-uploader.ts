@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, ListBucketsCommand, HeadObjectCommand } fro
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import { Logger } from './logger';
 
 export interface R2Config {
   accountId: string;
@@ -130,12 +131,12 @@ export class R2Uploader {
       this.uploadedFiles++;
       
       // 新規ファイルのアップロードのみログに表示
-      console.log(`ファイル "${key}" をアップロードしました`);
+      Logger.log(`ファイル "${key}" をアップロードしました`);
       
       // パブリックURLを返す（r2.devドメインを使用）
       return `https://${this.bucketName}.r2.dev/${key}`;
     } catch (error) {
-      console.error(`R2へのアップロードに失敗しました: ${error}`);
+      Logger.error(`R2へのアップロードに失敗しました: ${error}`);
       throw error;
     }
   }
@@ -169,12 +170,12 @@ export class R2Uploader {
 
       // 処理結果のサマリーを表示
       if (this.skippedFiles > 0) {
-        console.log(`${this.skippedFiles}個のファイルが既に存在し、内容が同じなのでスキップしました`);
+        Logger.log(`${this.skippedFiles}個のファイルが既に存在し、内容が同じなのでスキップしました`);
       }
       
       return uploadedUrls;
     } catch (error) {
-      console.error(`ディレクトリのアップロードに失敗しました: ${error}`);
+      Logger.error(`ディレクトリのアップロードに失敗しました: ${error}`);
       throw error;
     }
   }
@@ -198,7 +199,7 @@ export class R2Uploader {
       
       return false;
     } catch (error) {
-      console.error(`バケットの確認に失敗しました: ${error}`);
+      Logger.error(`バケットの確認に失敗しました: ${error}`);
       throw error;
     }
   }
