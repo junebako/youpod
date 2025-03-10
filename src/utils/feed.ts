@@ -43,14 +43,14 @@ export async function fetchYouTubeFeed(feedUrl: string): Promise<VideoEntry[]> {
       parseAttributeValue: true,
       parseTagValue: true,
     });
-    
+
     const result = parser.parse(response.data);
-    
+
     if (!result.feed || !result.feed.entry) {
       Logger.warn('フィードにエントリーが見つかりませんでした:', feedUrl);
       return [];
     }
-    
+
     return result.feed.entry.map((entry: any) => {
       const videoId = entry['yt:videoId'];
       return {
@@ -109,7 +109,7 @@ export async function fetchChannelIcon(channelId: string): Promise<{
 
     // 基本URLを取得（サイズパラメータを除去）
     let baseUrl = match[1].replace(/=s\d+-c-k-c0x00ffffff-no-rj(-mo)?/, '');
-    
+
     // 異なるサイズのアイコンURLを生成
     return {
       default: {

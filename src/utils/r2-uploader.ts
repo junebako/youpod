@@ -45,15 +45,15 @@ export class R2Uploader {
     return new Promise((resolve, reject) => {
       const hash = crypto.createHash('md5');
       const stream = fs.createReadStream(filePath);
-      
+
       stream.on('data', (data) => {
         hash.update(data);
       });
-      
+
       stream.on('end', () => {
         resolve(hash.digest('hex'));
       });
-      
+
       stream.on('error', (error) => {
         reject(error);
       });
@@ -70,7 +70,7 @@ export class R2Uploader {
         Bucket: this.bucketName,
         Key: key,
       });
-      
+
       const response = await this.client.send(command);
       // ETagはダブルクォーテーションで囲まれているので、それを取り除く
       return response.ETag ? response.ETag.replace(/"/g, '') : null;
@@ -91,11 +91,11 @@ export class R2Uploader {
       // 既存ファイルのスキップが有効で、ファイルが存在する場合
       if (this.skipExistingFiles) {
         const remoteETag = await this.checkFileExists(key);
-        
+
         if (remoteETag) {
           // ローカルファイルのMD5ハッシュを計算
           const localMD5 = await this.calculateMD5(filePath);
-          
+
           // ハッシュが一致する場合（同じ内容のファイル）、アップロードをスキップ
           if (remoteETag === localMD5) {
             // スキップカウントを増やす
@@ -104,9 +104,9 @@ export class R2Uploader {
           }
         }
       }
-      
+
       const fileContent = await fs.readFile(filePath);
-      
+
       // コンテンツタイプが指定されていない場合、ファイル拡張子から推測
       if (!contentType) {
         const ext = path.extname(filePath).toLowerCase();
@@ -127,13 +127,13 @@ export class R2Uploader {
       });
 
       await this.client.send(command);
-      
+
       // アップロードカウントを増やす
       this.uploadedFiles++;
-      
+
       // 新規ファイルのアップロードのみログに表示
       Logger.log(`ファイル "${key}" をアップロードしました`);
-      
+
       // パブリックURLを返す（r2.devドメインを使用）
       return `https://${this.bucketName}.r2.dev/${key}`;
     } catch (error) {
@@ -152,7 +152,7 @@ export class R2Uploader {
       // スキップカウントとアップロードカウントをリセット
       this.skippedFiles = 0;
       this.uploadedFiles = 0;
-      
+
       const files = await fs.readdir(dirPath);
       const uploadedUrls: string[] = [];
 
@@ -162,7 +162,7 @@ export class R2Uploader {
 
         if (stats.isFile()) {
           const key = prefix ? `${prefix}/${file}` : file;
-          
+
           // uploadFileメソッド内でスキップ処理が行われる
           const url = await this.uploadFile(filePath, key);
           uploadedUrls.push(url);
@@ -173,7 +173,7 @@ export class R2Uploader {
       if (this.skippedFiles > 0) {
         Logger.log(`${this.skippedFiles}個のファイルが既に存在し、内容が同じなのでスキップしました`);
       }
-      
+
       return uploadedUrls;
     } catch (error) {
       Logger.error(`ディレクトリのアップロードに失敗しました: ${error}`);
@@ -189,15 +189,15 @@ export class R2Uploader {
     if (this.skipBucketCheck) {
       return true;
     }
-    
+
     try {
       const command = new ListBucketsCommand({});
       const response = await this.client.send(command);
-      
+
       if (response.Buckets) {
         return response.Buckets.some(bucket => bucket.Name === this.bucketName);
       }
-      
+
       return false;
     } catch (error) {
       Logger.error(`バケットの確認に失敗しました: ${error}`);

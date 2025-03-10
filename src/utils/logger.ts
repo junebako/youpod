@@ -13,10 +13,10 @@ export class Logger {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    
+
     return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
   }
-  
+
   /**
    * 情報ログを出力
    * @param message ログメッセージ
@@ -30,7 +30,7 @@ export class Logger {
       console.log(`${timestamp} ${message}`);
     }
   }
-  
+
   /**
    * エラーログを出力
    * @param message エラーメッセージ
@@ -44,7 +44,7 @@ export class Logger {
       console.error(`${timestamp} ${message}`);
     }
   }
-  
+
   /**
    * 警告ログを出力
    * @param message 警告メッセージ
@@ -58,7 +58,7 @@ export class Logger {
       console.warn(`${timestamp} ${message}`);
     }
   }
-  
+
   /**
    * デバッグログを出力
    * @param message デバッグメッセージ

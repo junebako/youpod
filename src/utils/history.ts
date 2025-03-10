@@ -77,12 +77,12 @@ export class HistoryManager {
     try {
       const content = fs.readFileSync(this.historyFilePath, 'utf-8');
       const lines = content.trim().split('\n');
-      
+
       // ヘッダー行をスキップ
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
-        
+
         const [
           channelLabel,
           videoId,
@@ -94,7 +94,7 @@ export class HistoryManager {
           downloadedAt,
           encodedDescription
         ] = line.split('\t');
-        
+
         // Base64エンコードされた説明文をデコード
         let description: string | undefined;
         if (encodedDescription) {
@@ -104,7 +104,7 @@ export class HistoryManager {
             Logger.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
           }
         }
-        
+
         const entry: HistoryEntry = {
           channelLabel,
           videoId,
@@ -116,10 +116,10 @@ export class HistoryManager {
           downloadedAt,
           description
         };
-        
+
         this.history.set(videoId, entry);
       }
-      
+
       Logger.log(`${this.history.size}件のダウンロード履歴を読み込みました`);
     } catch (error) {
       Logger.error('履歴の読み込みに失敗しました:', error);
@@ -152,7 +152,7 @@ export class HistoryManager {
   ): Promise<void> {
     // ファイルパスを相対パスに変換
     const relativeFilePath = this.toRelativePath(downloadResult.filePath);
-    
+
     const entry: HistoryEntry = {
       channelLabel,
       videoId: downloadResult.videoId,
@@ -163,9 +163,9 @@ export class HistoryManager {
       publishedAt: videoEntry.published,
       downloadedAt: new Date().toISOString()
     };
-    
+
     this.history.set(entry.videoId, entry);
-    
+
     // TSVファイルに追記
     const line = [
       entry.channelLabel,
@@ -177,7 +177,7 @@ export class HistoryManager {
       entry.publishedAt,
       entry.downloadedAt
     ].join('\t');
-    
+
     await fs.appendFile(this.historyFilePath, line + '\n');
   }
 
@@ -188,27 +188,27 @@ export class HistoryManager {
     try {
       // メインの履歴ファイルのパス
       const historyFilePath = this.historyFilePath;
-      
+
       // ファイルが存在しない場合は空の配列を返す
       if (!await fs.pathExists(historyFilePath)) {
         return [];
       }
-      
+
       const content = await fs.readFile(historyFilePath, 'utf-8');
       const lines = content.trim().split('\n');
-      
+
       // ヘッダー行がない場合は空の配列を返す
       if (lines.length <= 1) {
         return [];
       }
-      
+
       const entries: SimpleHistoryEntry[] = [];
-      
+
       // ヘッダー行をスキップ
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
-        
+
         const [
           channelLabel,
           videoId,
@@ -220,7 +220,7 @@ export class HistoryManager {
           downloadedAt,
           encodedDescription
         ] = line.split('\t');
-        
+
         // Base64エンコードされた説明文をデコード
         let description: string | undefined;
         if (encodedDescription) {
@@ -230,7 +230,7 @@ export class HistoryManager {
             Logger.warn(`警告: 説明文のデコードに失敗しました: ${videoId}`);
           }
         }
-        
+
         // 指定されたチャンネルスラグに関連するエントリのみを追加
         // ファイルパスにチャンネルスラグが含まれているかどうかで判断
         if (filePath.includes(channelSlug)) {
@@ -246,7 +246,7 @@ export class HistoryManager {
           });
         }
       }
-      
+
       Logger.log(`チャンネル ${channelSlug} の履歴を ${entries.length} 件読み込みました`);
       return entries;
     } catch (error) {
@@ -262,13 +262,13 @@ export class HistoryManager {
     try {
       // メインの履歴ファイルのパス
       const historyFilePath = this.historyFilePath;
-      
+
       // ディレクトリが存在することを確認
       await fs.ensureDir(path.dirname(historyFilePath));
-      
+
       // ファイルパスを相対パスに変換
       const relativeFilePath = this.toRelativePath(entry.filePath);
-      
+
       // ファイルサイズを取得
       let fileSize = 0;
       try {
@@ -278,13 +278,13 @@ export class HistoryManager {
         Logger.warn(`警告: ファイルサイズの取得に失敗しました: ${entry.filePath}`);
         fileSize = 0;
       }
-      
+
       // ファイル形式を取得
       const format = path.extname(entry.filePath).replace('.', '');
-      
+
       // チャンネルラベルを取得（エントリから取得するか、スラグから推測）
       const channelLabel = entry.channelLabel || (channelSlug.charAt(0).toUpperCase() + channelSlug.slice(1).replace(/-/g, ' '));
-      
+
       // 新しいエントリを作成
       const newEntry: HistoryEntry = {
         channelLabel,
@@ -297,7 +297,7 @@ export class HistoryManager {
         downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString(),
         description: entry.description
       };
-      
+
       // 既存のエントリを確認
       if (this.history.has(entry.videoId)) {
         // 既存のエントリを更新
@@ -305,7 +305,7 @@ export class HistoryManager {
       } else {
         // 新しいエントリを追加
         this.history.set(entry.videoId, newEntry);
-        
+
         // ファイルに追加
         const encodedDescription = newEntry.description ? Buffer.from(newEntry.description).toString('base64') : '';
         const line = [
@@ -319,7 +319,7 @@ export class HistoryManager {
           newEntry.downloadedAt,
           encodedDescription // Base64エンコードされた説明文
         ].join('\t');
-        
+
         await fs.appendFile(historyFilePath, line + '\n');
       }
     } catch (error) {
