@@ -289,7 +289,7 @@ async function uploadToR2(config: any, options: AppOptions) {
 
       // 公開URLを表示
       const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
-      Logger.log('\n===== ポッドキャストフィードURL =====');
+      Logger.log('===== ポッドキャストフィードURL =====');
 
       for (const channel of config.channels) {
         Logger.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
@@ -388,7 +388,7 @@ async function uploadToR2(config: any, options: AppOptions) {
 
     // 公開URLを表示
     const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
-    Logger.log('\n===== ポッドキャストフィードURL =====');
+    Logger.log('===== ポッドキャストフィードURL =====');
 
     for (const channel of config.channels) {
       Logger.log(`${channel.label}: ${baseUrl}/podcasts/${channel.slug}/feed.xml`);
