@@ -123,6 +123,7 @@ export class R2Uploader {
         Key: key,
         Body: fileContent,
         ContentType: contentType,
+        CacheControl: contentType === 'application/xml' ? 'max-age=300' : 'max-age=86400',
       });
 
       await this.client.send(command);
