@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import * as Podcast from 'podcast';
+import { create } from 'xmlbuilder2';
 import { Channel } from './config';
 import { HistoryEntry } from './history';
 import { Logger } from './logger';
@@ -70,26 +70,10 @@ export class FeedGenerator {
       ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/icon.jpg`
       : feedOptions.imageUrl;
 
-    // ポッドキャストフィードを作成
-    const feed = new Podcast.Podcast({
-      title: feedOptions.title!,
-      description: feedOptions.description!,
-      feedUrl: `${feedOptions.baseUrl ? feedOptions.baseUrl + '/podcasts/' + channel.slug + '/feed.xml' : feedOptions.siteUrl + '/feed.xml'}`,
-      siteUrl: feedOptions.siteUrl!,
-      imageUrl: absoluteImageUrl,
-      author: feedOptions.author!,
-      copyright: feedOptions.copyright!,
-      language: feedOptions.language!,
-      categories: feedOptions.categories!,
-      itunesAuthor: feedOptions.author!,
-      itunesSubtitle: feedOptions.description!,
-      itunesSummary: feedOptions.description!,
-      itunesExplicit: feedOptions.explicit!,
-      itunesOwner: {
-        name: feedOptions.author!,
-        email: 'noreply@example.com'
-      }
-    });
+    // フィードURLを生成
+    const feedUrl = feedOptions.baseUrl
+      ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/feed.xml`
+      : `${feedOptions.siteUrl}/feed.xml`;
 
     // エントリを日付順にソート（新しい順）
     const sortedEntries = [...entries].sort(
@@ -98,6 +82,47 @@ export class FeedGenerator {
 
     // 最大アイテム数を制限
     const limitedEntries = sortedEntries.slice(0, feedOptions.maxItems);
+
+    // XMLドキュメントを作成
+    const doc = create({ version: '1.0', encoding: 'UTF-8' })
+      .ele('rss', {
+        'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
+        'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+        'xmlns:atom': 'http://www.w3.org/2005/Atom',
+        'version': '2.0',
+        'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
+        'xmlns:podcast': 'https://podcastindex.org/namespace/1.0'
+      })
+      .ele('channel')
+        .ele('title').dat(feedOptions.title!).up()
+        .ele('description').dat(feedOptions.description!).up()
+        .ele('link').txt(feedOptions.siteUrl!).up()
+        .ele('generator').txt('YouPod Generator').up()
+        .ele('lastBuildDate').txt(new Date().toUTCString()).up()
+        .ele('atom:link', {
+          'href': feedUrl,
+          'rel': 'self',
+          'type': 'application/rss+xml'
+        }).up()
+        .ele('author').txt(`${feedOptions.author!} <noreply@example.com>`).up()
+        .ele('copyright').dat(feedOptions.copyright!).up()
+        .ele('language').dat(feedOptions.language!).up();
+
+    // カテゴリを追加
+    for (const category of feedOptions.categories!) {
+      doc.ele('category').dat(category).up();
+    }
+
+    // iTunes固有の情報を追加
+    doc.ele('itunes:author').txt(feedOptions.author!).up()
+      .ele('itunes:subtitle').txt(feedOptions.description!).up()
+      .ele('itunes:summary').txt(feedOptions.description!).up()
+      .ele('itunes:owner')
+        .ele('itunes:name').txt(feedOptions.author!).up()
+        .ele('itunes:email').txt('noreply@example.com').up()
+      .up()
+      .ele('itunes:explicit').txt(feedOptions.explicit! ? 'true' : 'false').up()
+      .ele('itunes:image', { 'href': absoluteImageUrl }).up();
 
     // 各エントリをフィードに追加
     for (const entry of limitedEntries) {
@@ -117,25 +142,26 @@ export class FeedGenerator {
         ? `${feedOptions.baseUrl}/podcasts/${channel.slug}/icon.jpg`
         : feedOptions.imageUrl!;
 
-      feed.addItem({
-        title: entry.title, // チャンネル名を含めない
-        description: entry.description || entry.title, // YouTubeの説明文があれば使用、なければタイトルを使用
-        url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
-        guid: entry.videoId,
-        date: new Date(entry.publishedAt),
-        enclosure: {
-          url: fileUrl,
-          file: absoluteFilePath,
-          size: entry.fileSize,
-          type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
-        },
-        itunesImage: itunesImageUrl, // アイテムのアイコンにチャンネルのアイコンを設定
-        itunesSummary: entry.description || entry.title // iTunes用のサマリーにも説明文を設定
-      });
+      // アイテムを追加
+      const item = doc.ele('item')
+        .ele('title').dat(entry.title).up()
+        .ele('description').dat(entry.description || entry.title).up()
+        .ele('link').txt(`https://www.youtube.com/watch?v=${entry.videoId}`).up()
+        .ele('guid', { 'isPermaLink': 'false' }).txt(entry.videoId).up()
+        .ele('dc:creator').dat(feedOptions.author!).up()
+        .ele('pubDate').txt(new Date(entry.publishedAt).toUTCString()).up()
+        .ele('enclosure', {
+          'url': fileUrl,
+          'length': entry.fileSize,
+          'type': fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
+        }).up()
+        .ele('itunes:summary').txt(entry.description || entry.title).up()
+        .ele('itunes:explicit').txt(feedOptions.explicit! ? 'true' : 'false').up()
+        .ele('itunes:image', { 'href': itunesImageUrl }).up();
     }
 
     // XMLを生成
-    const xml = feed.buildXml();
+    const xml = doc.end({ prettyPrint: true });
 
     // ファイルに保存（slugを使用）
     const outputPath = path.join(outputDir, `${channel.slug}.xml`);
@@ -179,26 +205,8 @@ export class FeedGenerator {
       ? `${feedOptions.baseUrl}/podcasts/all/icon.jpg`
       : feedOptions.imageUrl;
 
-    // ポッドキャストフィードを作成
-    const feed = new Podcast.Podcast({
-      title: feedOptions.title!,
-      description: feedOptions.description!,
-      feedUrl: `${feedOptions.baseUrl}/podcasts/all/feed.xml`,
-      siteUrl: feedOptions.siteUrl!,
-      imageUrl: absoluteImageUrl,
-      author: feedOptions.author!,
-      copyright: feedOptions.copyright!,
-      language: feedOptions.language!,
-      categories: feedOptions.categories!,
-      itunesAuthor: feedOptions.author!,
-      itunesSubtitle: feedOptions.description!,
-      itunesSummary: feedOptions.description!,
-      itunesExplicit: feedOptions.explicit!,
-      itunesOwner: {
-        name: feedOptions.author!,
-        email: 'noreply@example.com'
-      }
-    });
+    // フィードURLを生成
+    const feedUrl = `${feedOptions.baseUrl}/podcasts/all/feed.xml`;
 
     // すべてのエントリを収集
     const allEntries: HistoryEntry[] = [];
@@ -219,6 +227,47 @@ export class FeedGenerator {
 
     // 最大アイテム数を制限
     const limitedEntries = sortedEntries.slice(0, feedOptions.maxItems);
+
+    // XMLドキュメントを作成
+    const doc = create({ version: '1.0', encoding: 'UTF-8' })
+      .ele('rss', {
+        'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
+        'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+        'xmlns:atom': 'http://www.w3.org/2005/Atom',
+        'version': '2.0',
+        'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
+        'xmlns:podcast': 'https://podcastindex.org/namespace/1.0'
+      })
+      .ele('channel')
+        .ele('title').dat(feedOptions.title!).up()
+        .ele('description').dat(feedOptions.description!).up()
+        .ele('link').txt(feedOptions.siteUrl!).up()
+        .ele('generator').txt('YouPod Generator').up()
+        .ele('lastBuildDate').txt(new Date().toUTCString()).up()
+        .ele('atom:link', {
+          'href': feedUrl,
+          'rel': 'self',
+          'type': 'application/rss+xml'
+        }).up()
+        .ele('author').txt(`${feedOptions.author!} <noreply@example.com>`).up()
+        .ele('copyright').dat(feedOptions.copyright!).up()
+        .ele('language').dat(feedOptions.language!).up();
+
+    // カテゴリを追加
+    for (const category of feedOptions.categories!) {
+      doc.ele('category').dat(category).up();
+    }
+
+    // iTunes固有の情報を追加
+    doc.ele('itunes:author').txt(feedOptions.author!).up()
+      .ele('itunes:subtitle').txt(feedOptions.description!).up()
+      .ele('itunes:summary').txt(feedOptions.description!).up()
+      .ele('itunes:owner')
+        .ele('itunes:name').txt(feedOptions.author!).up()
+        .ele('itunes:email').txt('noreply@example.com').up()
+      .up()
+      .ele('itunes:explicit').txt(feedOptions.explicit! ? 'true' : 'false').up()
+      .ele('itunes:image', { 'href': absoluteImageUrl }).up();
 
     // 各エントリをフィードに追加
     for (const entry of limitedEntries) {
@@ -244,25 +293,26 @@ export class FeedGenerator {
         ? `${feedOptions.baseUrl}/podcasts/${channelSlug}/icon.jpg`
         : feedOptions.imageUrl!;
 
-      feed.addItem({
-        title: entry.title, // チャンネル名を含めない
-        description: entry.description || entry.title, // YouTubeの説明文があれば使用、なければタイトルを使用
-        url: `https://www.youtube.com/watch?v=${entry.videoId}`, // YouTubeの動画URLに変更
-        guid: entry.videoId,
-        date: new Date(entry.publishedAt),
-        enclosure: {
-          url: fileUrl,
-          file: absoluteFilePath,
-          size: entry.fileSize,
-          type: fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
-        },
-        itunesImage: itunesImageUrl, // アイテムのアイコンにチャンネルのアイコンを設定
-        itunesSummary: entry.description || entry.title // iTunes用のサマリーにも説明文を設定
-      });
+      // アイテムを追加
+      const item = doc.ele('item')
+        .ele('title').dat(entry.title).up()
+        .ele('description').dat(entry.description || entry.title).up()
+        .ele('link').txt(`https://www.youtube.com/watch?v=${entry.videoId}`).up()
+        .ele('guid', { 'isPermaLink': 'false' }).txt(entry.videoId).up()
+        .ele('dc:creator').dat(feedOptions.author!).up()
+        .ele('pubDate').txt(new Date(entry.publishedAt).toUTCString()).up()
+        .ele('enclosure', {
+          'url': fileUrl,
+          'length': entry.fileSize,
+          'type': fileExt === 'mp3' ? 'audio/mpeg' : 'video/mp4'
+        }).up()
+        .ele('itunes:summary').txt(entry.description || entry.title).up()
+        .ele('itunes:explicit').txt(feedOptions.explicit! ? 'true' : 'false').up()
+        .ele('itunes:image', { 'href': itunesImageUrl }).up();
     }
 
     // XMLを生成
-    const xml = feed.buildXml();
+    const xml = doc.end({ prettyPrint: true });
 
     // ファイルに保存
     const outputPath = path.join(outputDir, 'all-channels.xml');
@@ -273,7 +323,7 @@ export class FeedGenerator {
   }
 
   /**
-   * すべてのチャンネルのRSSフィードを生成する
+   * すべてのフィードを生成する
    */
   public static async generateAllFeeds(
     channels: Channel[],
@@ -287,9 +337,11 @@ export class FeedGenerator {
     for (const channel of channels) {
       const entries = historyEntriesByChannel.get(channel.slug) || [];
       if (entries.length === 0) {
-        Logger.warn(`警告: チャンネル "${channel.label}" にはダウンロード済みの動画がありません`);
+        Logger.log(`チャンネル "${channel.label}" の履歴がありません`);
         continue;
       }
+
+      Logger.log(`チャンネル ${channel.slug} の履歴を ${entries.length} 件読み込みました`);
 
       const outputPath = await this.generateChannelFeed(channel, entries, outputDir, options);
       outputPaths.push(outputPath);
