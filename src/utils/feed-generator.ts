@@ -21,66 +21,12 @@ export interface FeedOptions {
 
 export class FeedGenerator {
   /**
-   * 相対パスを絶対パスに変換
+   * 相対パスを絶対パスに変換する
    */
   private static toAbsolutePath(relativePath: string): string {
-    if (path.isAbsolute(relativePath)) {
-      return relativePath;
-    }
-    return path.join(process.cwd(), relativePath);
-  }
-
-  /**
-   * XMLを整形する（シンプルな実装）
-   */
-  private static prettyXml(xml: string): string {
-    // XML宣言を取り出す
-    const xmlDeclaration = xml.match(/^<\?xml[^>]*\?>/);
-    const xmlWithoutDeclaration = xml.replace(/^<\?xml[^>]*\?>/, '');
-
-    // 整形のためのシンプルな実装
-    let formatted = '';
-    let depth = 0;
-    const tab = '  '; // 2スペースのインデント
-
-    // タグごとに分割
-    const tokens = xmlWithoutDeclaration.split(/(<\/?[^>]+>)/g);
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i].trim();
-      if (!token) continue;
-
-      // 終了タグまたは自己終了タグの場合はインデントを減らす
-      if (token.match(/^<\//)) {
-        depth--;
-      }
-
-      // インデントを追加
-      const indent = tab.repeat(Math.max(0, depth));
-
-      // CDATAセクションの場合は特別処理
-      if (token.includes('<![CDATA[')) {
-        formatted += indent + token + '\n';
-      } else if (token.match(/^<[^\/]/)) {
-        // 開始タグの場合
-        formatted += indent + token + '\n';
-
-        // 自己終了タグでなければインデントを増やす
-        if (!token.match(/\/>$/)) {
-          depth++;
-        }
-      } else {
-        // その他のタグやテキスト
-        formatted += indent + token + '\n';
-      }
-    }
-
-    // XML宣言を先頭に戻す
-    if (xmlDeclaration && xmlDeclaration[0]) {
-      return xmlDeclaration[0] + '\n' + formatted;
-    }
-
-    return formatted;
+    if (!relativePath) return '';
+    if (path.isAbsolute(relativePath)) return relativePath;
+    return path.resolve(process.cwd(), relativePath);
   }
 
   /**
@@ -188,13 +134,12 @@ export class FeedGenerator {
       });
     }
 
-    // XMLを生成して整形
+    // XMLを生成
     const xml = feed.buildXml();
-    const prettyXml = this.prettyXml(xml);
 
     // ファイルに保存（slugを使用）
     const outputPath = path.join(outputDir, `${channel.slug}.xml`);
-    await fs.writeFile(outputPath, prettyXml);
+    await fs.writeFile(outputPath, xml);
 
     Logger.log(`RSSフィードを生成しました: ${outputPath}`);
     return outputPath;
@@ -316,13 +261,12 @@ export class FeedGenerator {
       });
     }
 
-    // XMLを生成して整形
+    // XMLを生成
     const xml = feed.buildXml();
-    const prettyXml = this.prettyXml(xml);
 
     // ファイルに保存
     const outputPath = path.join(outputDir, 'all-channels.xml');
-    await fs.writeFile(outputPath, prettyXml);
+    await fs.writeFile(outputPath, xml);
 
     Logger.log(`統合RSSフィードを生成しました: ${outputPath}`);
     return outputPath;
@@ -357,4 +301,4 @@ export class FeedGenerator {
 
     return outputPaths;
   }
-} 
+}
