@@ -247,7 +247,6 @@ export class HistoryManager {
         }
       }
 
-      Logger.log(`チャンネル ${channelSlug} の履歴を ${entries.length} 件読み込みました`);
       return entries;
     } catch (error) {
       Logger.error(`チャンネル ${channelSlug} の履歴読み込みに失敗しました:`, error);
@@ -327,4 +326,4 @@ export class HistoryManager {
       throw error;
     }
   }
-} 
+}

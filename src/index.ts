@@ -58,8 +58,7 @@ async function main() {
       // 各チャンネルを処理
       for (const channel of channelsToProcess) {
         // 空行を追加してからログを出力
-        console.log('');
-        Logger.log(`===== チャンネル: ${channel.label} =====`);
+        Logger.section(`===== チャンネル: ${channel.label} =====`);
 
         // チャンネルの出力ディレクトリを作成
         const channelDir = path.join(outputBaseDir, channel.slug);
@@ -79,7 +78,7 @@ async function main() {
 
         // 最大ダウンロード数を制限
         const videosToDownload = newVideos.slice(0, options.maxVideos);
-        Logger.log(`うち${videosToDownload.length}個が新しい動画です\n`);
+        Logger.log(`うち${videosToDownload.length}個が新しい動画です`);
 
         // 各動画をダウンロード
         for (const video of videosToDownload) {
@@ -121,8 +120,7 @@ async function main() {
     const shouldGenerateFeed = options.feedOnly || options.all || (!options.downloadOnly && !options.uploadOnly);
     if (shouldGenerateFeed) {
       // 空行を追加してからログを出力
-      console.log('');
-      Logger.log(`===== RSSフィードを生成 =====`);
+      Logger.section(`===== RSSフィードを生成 =====`);
 
       // フィードディレクトリを作成
       const feedDir = path.join(process.cwd(), 'feeds');
@@ -204,8 +202,7 @@ async function uploadToR2(config: any, options: AppOptions) {
 
   try {
     // 空行を追加してからログを出力
-    console.log('');
-    Logger.log(`===== Cloudflare R2にアップロード =====`);
+    Logger.section(`===== Cloudflare R2にアップロード =====`);
 
     // R2アップローダーを初期化
     const uploader = new R2Uploader({
@@ -498,4 +495,4 @@ function parseCommandLineArgs(): AppOptions {
 main().catch(error => {
   Logger.error('予期しないエラーが発生しました:', error);
   process.exit(1);
-}); 
+});

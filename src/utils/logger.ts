@@ -72,4 +72,13 @@ export class Logger {
       console.debug(`${timestamp} ${message}`);
     }
   }
-} 
+
+  /**
+   * 空行を追加してからセクションヘッダーを出力
+   * @param message セクションヘッダーメッセージ
+   */
+  public static section(message: string): void {
+    console.log('');
+    this.log(message);
+  }
+}

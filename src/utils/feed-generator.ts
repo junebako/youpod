@@ -337,11 +337,8 @@ export class FeedGenerator {
     for (const channel of channels) {
       const entries = historyEntriesByChannel.get(channel.slug) || [];
       if (entries.length === 0) {
-        Logger.log(`チャンネル "${channel.label}" の履歴がありません`);
         continue;
       }
-
-      Logger.log(`チャンネル ${channel.slug} の履歴を ${entries.length} 件読み込みました`);
 
       const outputPath = await this.generateChannelFeed(channel, entries, outputDir, options);
       outputPaths.push(outputPath);
