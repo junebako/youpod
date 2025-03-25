@@ -18,6 +18,8 @@ export interface DownloadOptions {
   maxHeight?: number;   // 最大解像度の高さ（例: 480）
   maxBitrate?: number;     // 最大ビットレート（例: 500K）
   qualityPreset?: 'low' | 'medium' | 'high'; // 品質プリセット
+  retryCount?: number;  // リトライ回数
+  retryDelay?: number; // リトライ間隔（ミリ秒）
 }
 
 export interface DownloadResult {
@@ -35,7 +37,13 @@ export async function downloadVideo(
   videoUrlOrEntry: string | VideoEntry,
   options: DownloadOptions
 ): Promise<string> {
-  const { outputDir, format = 'mp4', quality = 'best' } = options;
+  const {
+    outputDir,
+    format = 'mp4',
+    quality = 'best',
+    retryCount = 3,
+    retryDelay = 5000
+  } = options;
 
   // videoUrlOrEntryがstring型（URL）かVideoEntry型かを判定
   let videoUrl: string;
@@ -104,8 +112,8 @@ export async function downloadVideo(
     const audioBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '128K';
     command += ` -x --audio-format mp3 --audio-quality ${audioBitrate}`;
   } else {
-    // 動画ファイルの場合は解像度とビットレートを制限
-    command += ` -f "bestvideo[height<=${maxHeight}][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=${maxHeight}][vcodec^=avc]/best[height<=${maxHeight}]" --merge-output-format mp4`;
+    // フォーマット指定を柔軟化
+    command += ` -f "bestvideo[height<=${maxHeight}]+bestaudio/best[height<=${maxHeight}]/best" --merge-output-format mp4`;
 
     // ビットレート制限を追加
     command += ` --postprocessor-args "ffmpeg:-c:v libx264 -b:v ${maxBitrate} -maxrate ${maxBitrate} -bufsize ${maxBitrate} -preset medium -movflags +faststart"`;
@@ -120,21 +128,33 @@ export async function downloadVideo(
 
   Logger.log(`コマンドを実行: ${command}`);
 
-  try {
-    // コマンドを実行
-    const { stdout, stderr } = await execAsync(command);
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < retryCount; attempt++) {
+    try {
+      // コマンドを実行
+      const { stdout, stderr } = await execAsync(command);
 
-    if (stderr) {
-      Logger.warn(`警告: ${stderr}`);
+      if (stderr) {
+        Logger.warn(`警告: ${stderr}`);
+      }
+
+      // ファイルサイズを取得
+      const stats = await fs.stat(outputFilePath);
+      Logger.log(`ダウンロード完了: ${outputFileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+
+      return outputFilePath;
+    } catch (error) {
+      lastError = error as Error;
+      Logger.warn(`ダウンロード試行 ${attempt + 1}/${retryCount} が失敗しました: ${error}`);
+
+      if (attempt < retryCount - 1) {
+        Logger.log(`${retryDelay/1000}秒後に再試行します...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
-
-    // ファイルサイズを取得
-    const stats = await fs.stat(outputFilePath);
-    Logger.log(`ダウンロード完了: ${outputFileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
-
-    return outputFilePath;
-  } catch (error) {
-    Logger.error(`ダウンロード中にエラーが発生しました: ${error}`);
-    throw error;
   }
-} 
+
+  // すべての試行が失敗した場合
+  Logger.error(`ダウンロードに失敗しました（${retryCount}回試行）: ${lastError}`);
+  throw lastError;
+}
