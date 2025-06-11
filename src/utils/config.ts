@@ -23,6 +23,7 @@ export interface R2Storage {
 export interface Config {
   channels: Channel[];
   storage?: R2Storage;
+  slack_webhook_url?: string;
 }
 
 export async function loadConfig(configPath: string = 'config.yml'): Promise<Config> {

@@ -7,6 +7,7 @@ import { FeedGenerator, FeedOptions } from './utils/feed-generator';
 import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { R2Uploader } from './utils/r2-uploader';
 import { Logger } from './utils/logger';
+import { SlackNotifier, NotificationStats } from './utils/slack-notifier';
 
 interface AppOptions {
   maxVideos?: number;
@@ -22,6 +23,14 @@ interface AppOptions {
 }
 
 async function main() {
+  // 通知用の統計情報を初期化
+  const notificationStats: NotificationStats = {
+    totalChannels: 0,
+    totalNewVideos: 0,
+    channelStats: [],
+    errors: []
+  };
+
   try {
     // 設定ファイルを読み込む
     const config = await loadConfig();
@@ -29,6 +38,13 @@ async function main() {
 
     // コマンドライン引数を解析
     const options = parseCommandLineArgs();
+
+    // Slack通知の準備（--allオプション時のみ）
+    let slackNotifier: SlackNotifier | null = null;
+    if (options.all && config.slack_webhook_url) {
+      slackNotifier = new SlackNotifier(config.slack_webhook_url);
+      notificationStats.totalChannels = config.channels.length;
+    }
 
     // チャンネルアイコンを取得
     await fetchChannelIcons(config.channels);
@@ -64,21 +80,26 @@ async function main() {
         const channelDir = path.join(outputBaseDir, channel.slug);
         await fs.ensureDir(channelDir);
 
-        // YouTubeフィードを取得
-        const videos = await fetchYouTubeFeed(channel.feed_url);
-        Logger.log(`${videos.length}個の動画が見つかりました`);
+        let channelNewVideoCount = 0;
 
-        // 履歴を読み込み
-        const history = await historyManager.loadHistory(channel.slug);
-        Logger.log(`チャンネル ${channel.slug} の履歴を ${history.length} 件読み込みました`);
+        try {
+          // YouTubeフィードを取得
+          const videos = await fetchYouTubeFeed(channel.feed_url);
+          Logger.log(`${videos.length}個の動画が見つかりました`);
 
-        // 新しい動画を特定
-        const existingVideoIds = new Set(history.map(entry => entry.videoId));
-        const newVideos = videos.filter(video => !existingVideoIds.has(video.videoId));
+          // 履歴を読み込み
+          const history = await historyManager.loadHistory(channel.slug);
+          Logger.log(`チャンネル ${channel.slug} の履歴を ${history.length} 件読み込みました`);
 
-        // 最大ダウンロード数を制限
-        const videosToDownload = newVideos.slice(0, options.maxVideos);
-        Logger.log(`うち${videosToDownload.length}個が新しい動画です`);
+          // 新しい動画を特定
+          const existingVideoIds = new Set(history.map(entry => entry.videoId));
+          const newVideos = videos.filter(video => !existingVideoIds.has(video.videoId));
+
+          // 最大ダウンロード数を制限
+          const videosToDownload = newVideos.slice(0, options.maxVideos);
+          Logger.log(`うち${videosToDownload.length}個が新しい動画です`);
+
+          channelNewVideoCount = videosToDownload.length;
 
         // 各動画をダウンロード
         for (const video of videosToDownload) {
@@ -112,6 +133,23 @@ async function main() {
           } catch (error) {
             Logger.error(`ダウンロード失敗: ${error}`);
           }
+        }
+
+        } catch (error) {
+          const errorMessage = `チャンネル "${channel.label}" の処理中にエラーが発生しました: ${error}`;
+          Logger.error(errorMessage);
+          if (notificationStats.errors) {
+            notificationStats.errors.push(errorMessage);
+          }
+        }
+
+        // 統計情報を記録
+        if (slackNotifier) {
+          notificationStats.channelStats.push({
+            label: channel.label,
+            newVideos: channelNewVideoCount
+          });
+          notificationStats.totalNewVideos += channelNewVideoCount;
         }
       }
     }
@@ -185,8 +223,31 @@ async function main() {
       await uploadToR2(config, options);
     }
 
+    // Slack通知を送信（--allオプション時のみ）
+    if (slackNotifier && options.all) {
+      try {
+        await slackNotifier.sendProcessingComplete(notificationStats);
+        Logger.log('Slack通知を送信しました');
+      } catch (error) {
+        Logger.error('Slack通知の送信に失敗しました:', error);
+      }
+    }
+
   } catch (error) {
-    Logger.error('エラーが発生しました:', error);
+    const errorMessage = `予期しないエラーが発生しました: ${error}`;
+    Logger.error(errorMessage);
+
+    // エラー時もSlack通知を送信
+    try {
+      const config = await loadConfig();
+      if (config.slack_webhook_url) {
+        const errorNotifier = new SlackNotifier(config.slack_webhook_url);
+        await errorNotifier.sendError(errorMessage);
+      }
+    } catch (slackError) {
+      Logger.error('Slack通知の送信に失敗しました:', slackError);
+    }
+
     process.exit(1);
   }
 }
