@@ -8,6 +8,7 @@ import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { R2Uploader } from './utils/r2-uploader';
 import { Logger } from './utils/logger';
 import { SlackNotifier, NotificationStats } from './utils/slack-notifier';
+import { cleanAllChannels } from './utils/video-cleaner';
 
 interface AppOptions {
   maxVideos?: number;
@@ -152,6 +153,10 @@ async function main() {
           notificationStats.totalNewVideos += channelNewVideoCount;
         }
       }
+
+      // ダウンロード処理の最後に古い動画ファイルを削除
+      Logger.section(`===== 古い動画ファイルのクリーンアップ =====`);
+      const cleanupResults = await cleanAllChannels(outputBaseDir, 20);
     }
 
     // フィード生成処理
