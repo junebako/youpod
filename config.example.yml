@@ -11,10 +11,22 @@ channels:
     slug: "mongol-night-fever"
     feed_url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCWzXsL9T4nAskfsf_9aXFaQ"
     format: "audio"
+# ストレージ設定（R2またはS3を選択）
+
+# Cloudflare R2を使用する場合
 storage:
   type: "r2"
   bucket: "your-bucket-name"
   account_id: "your-account-id"
   access_key_id: "your-access-key-id"
   secret_access_key: "your-secret-access-key"
-  public_url: "https://your-public-url.r2.dev" 
+  public_url: "https://your-public-url.r2.dev"  # 省略可能
+
+# AWS S3を使用する場合（以下をコメントアウトして使用）
+# storage:
+#   type: "s3"
+#   bucket: "your-bucket-name"
+#   region: "ap-northeast-1"  # 東京リージョンの例
+#   access_key_id: "your-access-key-id"
+#   secret_access_key: "your-secret-access-key"
+#   public_url: "https://your-bucket-name.s3.amazonaws.com"  # 省略可能

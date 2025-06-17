@@ -20,9 +20,20 @@ export interface R2Storage {
   public_url?: string;
 }
 
+export interface S3Storage {
+  type: 's3';
+  bucket: string;
+  region: string;
+  access_key_id: string;
+  secret_access_key: string;
+  public_url?: string;
+}
+
+export type Storage = R2Storage | S3Storage;
+
 export interface Config {
   channels: Channel[];
-  storage?: R2Storage;
+  storage?: Storage;
   slack_webhook_url?: string;
 }
 
@@ -73,14 +84,21 @@ export async function loadConfig(configPath: string = 'config.yml'): Promise<Con
     });
 
     // ストレージの設定を検証
-    if (config.storage && config.storage.type === 'r2') {
+    if (config.storage) {
       if (!config.storage.bucket) {
         throw new Error('storage.bucket が定義されていません');
       }
 
-      // 必須のR2設定が不足している場合は警告を表示
-      if (!config.storage.account_id || !config.storage.access_key_id || !config.storage.secret_access_key) {
-        Logger.warn('警告: R2の認証情報が不完全です。アップロード機能は利用できません。');
+      if (config.storage.type === 'r2') {
+        // 必須のR2設定が不足している場合は警告を表示
+        if (!config.storage.account_id || !config.storage.access_key_id || !config.storage.secret_access_key) {
+          Logger.warn('警告: R2の認証情報が不完全です。アップロード機能は利用できません。');
+        }
+      } else if (config.storage.type === 's3') {
+        // 必須のS3設定が不足している場合は警告を表示
+        if (!config.storage.region || !config.storage.access_key_id || !config.storage.secret_access_key) {
+          Logger.warn('警告: S3の認証情報が不完全です。アップロード機能は利用できません。');
+        }
       }
     }
 
@@ -89,4 +107,4 @@ export async function loadConfig(configPath: string = 'config.yml'): Promise<Con
     Logger.error('設定ファイルの読み込みに失敗しました:', error);
     throw error;
   }
-} 
+}

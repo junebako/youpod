@@ -6,6 +6,7 @@ import { HistoryManager, HistoryEntry } from './utils/history';
 import { FeedGenerator, FeedOptions } from './utils/feed-generator';
 import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { R2Uploader } from './utils/r2-uploader';
+import { S3Uploader } from './utils/s3-uploader';
 import { Logger } from './utils/logger';
 import { SlackNotifier, NotificationStats } from './utils/slack-notifier';
 import { cleanAllChannels } from './utils/video-cleaner';
@@ -202,7 +203,11 @@ async function main() {
       if (config.storage && config.storage.public_url) {
         baseUrl = config.storage.public_url;
       } else if (config.storage && config.storage.bucket) {
-        baseUrl = `https://${config.storage.bucket}.r2.dev`;
+        if (config.storage.type === 'r2') {
+          baseUrl = `https://${config.storage.bucket}.r2.dev`;
+        } else if (config.storage.type === 's3') {
+          baseUrl = `https://${config.storage.bucket}.s3.amazonaws.com`;
+        }
       }
 
       // フィードオプションを設定
@@ -225,7 +230,7 @@ async function main() {
     // アップロード処理
     const shouldUpload = options.uploadOnly || options.all;
     if (shouldUpload) {
-      await uploadToR2(config, options);
+      await uploadToStorage(config, options);
     }
 
     // Slack通知を送信（--allオプション時のみ）
@@ -258,27 +263,46 @@ async function main() {
 }
 
 /**
- * ファイルをR2にアップロードする
+ * ファイルをストレージ（R2またはS3）にアップロードする
  */
-async function uploadToR2(config: any, options: AppOptions) {
-  if (!config.storage || config.storage.type !== 'r2') {
-    Logger.error('R2ストレージの設定が見つかりません。アップロードをスキップします。');
+async function uploadToStorage(config: any, options: AppOptions) {
+  if (!config.storage) {
+    Logger.error('ストレージの設定が見つかりません。アップロードをスキップします。');
     return;
   }
 
   try {
-    // 空行を追加してからログを出力
-    Logger.section(`===== Cloudflare R2にアップロード =====`);
+    // アップローダーを初期化
+    let uploader: R2Uploader | S3Uploader;
 
-    // R2アップローダーを初期化
-    const uploader = new R2Uploader({
-      accountId: config.storage.account_id,
-      accessKeyId: config.storage.access_key_id,
-      secretAccessKey: config.storage.secret_access_key,
-      bucketName: config.storage.bucket,
-      skipBucketCheck: true, // バケットの存在確認をスキップ
-      skipExistingFiles: true // 既存ファイルのアップロードをスキップ
-    });
+    if (config.storage.type === 'r2') {
+      // 空行を追加してからログを出力
+      Logger.section(`===== Cloudflare R2にアップロード =====`);
+
+      uploader = new R2Uploader({
+        accountId: config.storage.account_id,
+        accessKeyId: config.storage.access_key_id,
+        secretAccessKey: config.storage.secret_access_key,
+        bucketName: config.storage.bucket,
+        skipBucketCheck: true, // バケットの存在確認をスキップ
+        skipExistingFiles: true // 既存ファイルのアップロードをスキップ
+      });
+    } else if (config.storage.type === 's3') {
+      // 空行を追加してからログを出力
+      Logger.section(`===== AWS S3にアップロード =====`);
+
+      uploader = new S3Uploader({
+        region: config.storage.region,
+        accessKeyId: config.storage.access_key_id,
+        secretAccessKey: config.storage.secret_access_key,
+        bucketName: config.storage.bucket,
+        skipBucketCheck: true, // バケットの存在確認をスキップ
+        skipExistingFiles: true // 既存ファイルのアップロードをスキップ
+      });
+    } else {
+      Logger.error(`サポートされていないストレージタイプ: ${(config.storage as any).type}`);
+      return;
+    }
 
     // バケットの存在を確認
     // const bucketExists = await uploader.checkBucket();
@@ -351,7 +375,14 @@ async function uploadToR2(config: any, options: AppOptions) {
       }
 
       // 公開URLを表示
-      const baseUrl = config.storage.public_url || `https://${config.storage.bucket}.r2.dev`;
+      let baseUrl = config.storage.public_url;
+      if (!baseUrl) {
+        if (config.storage.type === 'r2') {
+          baseUrl = `https://${config.storage.bucket}.r2.dev`;
+        } else if (config.storage.type === 's3') {
+          baseUrl = `https://${config.storage.bucket}.s3.amazonaws.com`;
+        }
+      }
       Logger.section('===== ポッドキャストフィードURL =====');
 
       for (const channel of config.channels) {

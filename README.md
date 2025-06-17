@@ -10,7 +10,7 @@ YouPodは、YouTubeチャンネルをポッドキャストに変換するツー�
 ## 使用技術
 
 - 言語: TypeScript
-- オブジェクトストレージ: Cloudflare R2
+- オブジェクトストレージ: Cloudflare R2 または AWS S3
 
 ## インストール
 
@@ -64,10 +64,10 @@ npm run feed
 # 特定のチャンネル（やんちゃクラブ）のRSSフィードのみを生成
 npm run feed:yancya
 
-# フィードファイルをCloudflare R2にアップロード
+# フィードファイルをストレージ（R2/S3）にアップロード
 npm run upload:feed
 
-# すべてのファイル（ダウンロードした動画・音声ファイルとフィード）をCloudflare R2にアップロード
+# すべてのファイル（ダウンロードした動画・音声ファイルとフィード）をストレージ（R2/S3）にアップロード
 npm run upload
 
 # カスタムオプションを指定して実行
@@ -83,8 +83,8 @@ node dist/index.js --max 5 --format mp3 --channel "チャンネル名"
 - `--skip-download`: 動画のダウンロードをスキップ
 - `--skip-feed`: RSSフィードの生成をスキップ
 - `--feed-only`: 動画のダウンロードをスキップしてRSSフィードのみを生成
-- `--upload`: すべてのファイルをCloudflare R2にアップロード
-- `--upload-feed`: フィードファイルのみをCloudflare R2にアップロード
+- `--upload`: すべてのファイルをストレージ（R2/S3）にアップロード
+- `--upload-feed`: フィードファイルのみをストレージ（R2/S3）にアップロード
 
 ## 設定
 
@@ -111,7 +111,9 @@ channels:
     feed_url: "https://www.youtube.com/feeds/videos.xml?channel_id=XXXXXXXXXXXX"
     format: "video" # または "audio"
 
-# Cloudflare R2の設定
+# ストレージ設定（Cloudflare R2またはAWS S3）
+
+# Cloudflare R2の場合
 storage:
   type: "r2"
   bucket: "your-bucket-name"  # R2バケット名
@@ -119,6 +121,15 @@ storage:
   access_key_id: "your-access-key-id" # R2アクセスキーID
   secret_access_key: "your-secret-access-key" # R2シークレットアクセスキー
   public_url: "https://your-public-url.r2.dev"    # 公開URL（カスタムドメインを使用する場合）
+
+# AWS S3の場合
+# storage:
+#   type: "s3"
+#   bucket: "your-bucket-name"  # S3バケット名
+#   region: "ap-northeast-1"     # AWSリージョン（東京の例）
+#   access_key_id: "your-access-key-id" # AWSアクセスキーID
+#   secret_access_key: "your-secret-access-key" # AWSシークレットアクセスキー
+#   public_url: "https://your-bucket-name.s3.amazonaws.com"    # 公開URL（カスタムドメインを使用する場合）
 ```
 
 ## 生成されるRSSフィード
@@ -140,7 +151,9 @@ storage:
 - **タイトル**: 動画のオリジナルタイトルがそのまま使用されます（チャンネル名は含まれません）
 - **リンク先**: 各アイテムのリンク先は元のYouTube動画URL（`https://www.youtube.com/watch?v={video_id}`）になります
 
-## Cloudflare R2の設定
+## ストレージの設定
+
+### Cloudflare R2の設定
 
 Cloudflare R2にファイルをアップロードするには、以下の手順で設定を行います：
 
@@ -168,6 +181,49 @@ Cloudflare R2にファイルをアップロードするには、以下の手順�
    - `npm run upload:feed`でフィードファイルのみをアップロード
    - `npm run upload`ですべてのファイルをアップロード
 
+### AWS S3の設定
+
+AWS S3にファイルをアップロードするには、以下の手順で設定を行います：
+
+1. **AWSアカウントの作成**
+   - [AWSのサインアップページ](https://aws.amazon.com/jp/)でアカウントを作成
+
+2. **S3バケットの作成**
+   - AWSマネジメントコンソールでS3を開く
+   - 「バケットを作成」をクリック
+   - バケット名とリージョンを設定
+   - 「パブリックアクセスをブロック」のチェックを外す（ポッドキャスト配信用）
+
+3. **バケットポリシーの設定**
+   - バケットを選択し、「アクセス許可」タブへ
+   - 「バケットポリシー」で以下のポリシーを追加：
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "PublicReadGetObject",
+         "Effect": "Allow",
+         "Principal": "*",
+         "Action": "s3:GetObject",
+         "Resource": "arn:aws:s3:::your-bucket-name/*"
+       }
+     ]
+   }
+   ```
+
+4. **IAMユーザーの作成**
+   - IAMで新しいユーザーを作成
+   - アクセスキーを生成
+   - S3のフルアクセス権限または特定バケットのみの権限を付与
+
+5. **config.ymlの設定**
+   - 上記で取得した情報を`config.yml`の`storage`セクションに設定
+   - `type: "s3"`に変更し、`region`を追加
+
+6. **アップロード**
+   - R2と同じコマンドでアップロード可能
+
 ## 開発
 
 ```bash
@@ -187,5 +243,5 @@ npm run test
 5. ダウンロードした動画の情報を元にRSSフィードを生成します
    - 各チャンネルごとのフィード
    - すべてのチャンネルを含む統合フィード
-6. 生成したフィードとダウンロードしたファイルをCloudflare R2にアップロードします
+6. 生成したフィードとダウンロードしたファイルをストレージ（R2またはS3）にアップロードします
 7. ポッドキャストアプリからアクセス可能なURLを提供します
