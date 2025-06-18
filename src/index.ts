@@ -233,13 +233,20 @@ async function main() {
       await uploadToStorage(config, options);
     }
 
-    // Slack通知を送信（--allオプション時のみ）
+    // Slack通知を送信（--allオプション時で、新着動画があったまたはエラーがあった場合のみ）
     if (slackNotifier && options.all) {
-      try {
-        await slackNotifier.sendProcessingComplete(notificationStats);
-        Logger.log('Slack通知を送信しました');
-      } catch (error) {
-        Logger.error('Slack通知の送信に失敗しました:', error);
+      const shouldNotify = notificationStats.totalNewVideos > 0 ||
+                          (notificationStats.errors && notificationStats.errors.length > 0);
+
+      if (shouldNotify) {
+        try {
+          await slackNotifier.sendProcessingComplete(notificationStats);
+          Logger.log('Slack通知を送信しました');
+        } catch (error) {
+          Logger.error('Slack通知の送信に失敗しました:', error);
+        }
+      } else {
+        Logger.log('新着動画もエラーもないため、Slack通知をスキップしました');
       }
     }
 
