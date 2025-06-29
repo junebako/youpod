@@ -101,7 +101,8 @@ async function main() {
           const videosToDownload = newVideos.slice(0, options.maxVideos);
           Logger.log(`うち${videosToDownload.length}個が新しい動画です`);
 
-          channelNewVideoCount = videosToDownload.length;
+          // 実際にダウンロードが成功した動画の数をカウント
+          channelNewVideoCount = 0;
 
         // 各動画をダウンロード
         for (const video of videosToDownload) {
@@ -130,6 +131,9 @@ async function main() {
               channelLabel: channel.label,
               description: video.mediaGroup?.description // YouTubeの説明文を保存
             });
+
+            // ダウンロードが成功した場合のみカウントを増やす
+            channelNewVideoCount++;
 
             Logger.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
