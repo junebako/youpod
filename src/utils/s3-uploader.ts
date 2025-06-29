@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, ListBucketsCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
@@ -9,13 +10,16 @@ export interface S3Config {
   secretAccessKey: string;
   region: string;
   bucketName: string;
+  cloudFrontDistributionId?: string; // CloudFrontディストリビューションID（オプション）
   skipBucketCheck?: boolean;  // バケットの存在確認をスキップするオプション
   skipExistingFiles?: boolean; // 既存ファイルのアップロードをスキップするオプション
 }
 
 export class S3Uploader {
   private client: S3Client;
+  private cloudFrontClient: CloudFrontClient | null;
   private bucketName: string;
+  private cloudFrontDistributionId: string | null;
   private skipBucketCheck: boolean;
   private skipExistingFiles: boolean;
   private skippedFiles: number = 0;
@@ -23,6 +27,8 @@ export class S3Uploader {
 
   constructor(config: S3Config) {
     this.bucketName = config.bucketName;
+    this.cloudFrontDistributionId = config.cloudFrontDistributionId || null;
+
     this.client = new S3Client({
       region: config.region,
       credentials: {
@@ -30,10 +36,53 @@ export class S3Uploader {
         secretAccessKey: config.secretAccessKey,
       },
     });
+
+    // CloudFrontディストリビューションIDが設定されている場合のみCloudFrontクライアントを初期化
+    if (this.cloudFrontDistributionId) {
+      this.cloudFrontClient = new CloudFrontClient({
+        region: config.region,
+        credentials: {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey,
+        },
+      });
+    } else {
+      this.cloudFrontClient = null;
+    }
+
     this.skipBucketCheck = config.skipBucketCheck || false;
     this.skipExistingFiles = config.skipExistingFiles || false;
     this.skippedFiles = 0;
     this.uploadedFiles = 0;
+  }
+
+  /**
+   * CloudFrontのキャッシュを無効化する
+   * @param paths 無効化するパスの配列
+   */
+  private async invalidateCloudFrontCache(paths: string[]): Promise<void> {
+    if (!this.cloudFrontClient || !this.cloudFrontDistributionId) {
+      return;
+    }
+
+    try {
+      const command = new CreateInvalidationCommand({
+        DistributionId: this.cloudFrontDistributionId,
+        InvalidationBatch: {
+          Paths: {
+            Quantity: paths.length,
+            Items: paths,
+          },
+          CallerReference: `youpod-${Date.now()}`,
+        },
+      });
+
+      const result = await this.cloudFrontClient.send(command);
+      Logger.log(`CloudFrontキャッシュ無効化を開始しました (ID: ${result.Invalidation?.Id})`);
+      Logger.log(`無効化パス: ${paths.join(', ')}`);
+    } catch (error) {
+      Logger.error(`CloudFrontキャッシュ無効化に失敗しました: ${error}`);
+    }
   }
 
   /**
@@ -154,6 +203,7 @@ export class S3Uploader {
 
       const files = await fs.readdir(dirPath);
       const uploadedUrls: string[] = [];
+      const invalidationPaths: string[] = [];
 
       for (const file of files) {
         const filePath = path.join(dirPath, file);
@@ -165,7 +215,17 @@ export class S3Uploader {
           // uploadFileメソッド内でスキップ処理が行われる
           const url = await this.uploadFile(filePath, key);
           uploadedUrls.push(url);
+
+          // XMLファイル（フィード）の場合、キャッシュ無効化対象に追加
+          if (path.extname(file).toLowerCase() === '.xml') {
+            invalidationPaths.push(`/${key}`);
+          }
         }
+      }
+
+      // フィードファイルがアップロードされた場合、CloudFrontキャッシュを無効化
+      if (invalidationPaths.length > 0) {
+        await this.invalidateCloudFrontCache(invalidationPaths);
       }
 
       // 処理結果のサマリーを表示

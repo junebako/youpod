@@ -30,3 +30,4 @@ storage:
 #   access_key_id: "your-access-key-id"
 #   secret_access_key: "your-secret-access-key"
 #   public_url: "https://your-bucket-name.s3.amazonaws.com"  # 省略可能
+#   cloudfront_distribution_id: "E1234567890ABC"  # CloudFrontディストリビューションID（省略可能）

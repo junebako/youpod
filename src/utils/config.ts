@@ -27,6 +27,7 @@ export interface S3Storage {
   access_key_id: string;
   secret_access_key: string;
   public_url?: string;
+  cloudfront_distribution_id?: string; // CloudFrontディストリビューションID（オプション）
 }
 
 export type Storage = R2Storage | S3Storage;

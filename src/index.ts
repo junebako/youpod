@@ -303,6 +303,7 @@ async function uploadToStorage(config: any, options: AppOptions) {
         accessKeyId: config.storage.access_key_id,
         secretAccessKey: config.storage.secret_access_key,
         bucketName: config.storage.bucket,
+        cloudFrontDistributionId: config.storage.cloudfront_distribution_id, // CloudFrontディストリビューションID
         skipBucketCheck: true, // バケットの存在確認をスキップ
         skipExistingFiles: true // 既存ファイルのアップロードをスキップ
       });
