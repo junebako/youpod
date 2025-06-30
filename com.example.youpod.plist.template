@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- サービス名 -->
+    <key>Label</key>
+    <string>com.example.youpod</string>
+
+    <!-- 実行するコマンド -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{PROJECT_PATH}}/run-youpod.sh</string>
+    </array>
+
+    <!-- 作業ディレクトリ -->
+    <key>WorkingDirectory</key>
+    <string>{{PROJECT_PATH}}</string>
+
+    <!-- 環境変数 -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- 実行スケジュール（毎日0:10、7:10、13:10、20:10） -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>0</integer>
+            <key>Minute</key>
+            <integer>10</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>10</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>13</integer>
+            <key>Minute</key>
+            <integer>10</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>20</integer>
+            <key>Minute</key>
+            <integer>10</integer>
+        </dict>
+    </array>
+
+    <!-- ログ出力 -->
+    <key>StandardOutPath</key>
+    <string>{{PROJECT_PATH}}/logs/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{PROJECT_PATH}}/logs/launchd-stderr.log</string>
+
+    <!-- 自動起動設定 -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- プロセスが終了した場合の動作 -->
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>
