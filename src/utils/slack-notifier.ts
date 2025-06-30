@@ -6,6 +6,7 @@ export interface NotificationStats {
   channelStats: Array<{
     label: string;
     newVideos: number;
+    videoTitles?: string[]; // 新着動画のタイトル一覧
   }>;
   errors?: string[];
 }
@@ -33,7 +34,14 @@ export class SlackNotifier {
     // チャンネル別の詳細を生成
     const channelDetails = channelStats
       .filter(channel => channel.newVideos > 0)
-      .map(channel => `• ${channel.label}: ${channel.newVideos}件`)
+      .map(channel => {
+        let detail = `• **${channel.label}**: ${channel.newVideos}件`;
+        if (channel.videoTitles && channel.videoTitles.length > 0) {
+          const titles = channel.videoTitles.map(title => `  - ${title}`).join('\n');
+          detail += `\n${titles}`;
+        }
+        return detail;
+      })
       .join('\n');
 
     const noNewVideosChannels = channelStats

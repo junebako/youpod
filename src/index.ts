@@ -83,6 +83,7 @@ async function main() {
         await fs.ensureDir(channelDir);
 
         let channelNewVideoCount = 0;
+        const channelNewVideoTitles: string[] = [];
 
         try {
           // YouTubeフィードを取得
@@ -134,6 +135,7 @@ async function main() {
 
             // ダウンロードが成功した場合のみカウントを増やす
             channelNewVideoCount++;
+            channelNewVideoTitles.push(video.title);
 
             Logger.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
@@ -153,7 +155,8 @@ async function main() {
         if (slackNotifier) {
           notificationStats.channelStats.push({
             label: channel.label,
-            newVideos: channelNewVideoCount
+            newVideos: channelNewVideoCount,
+            videoTitles: channelNewVideoTitles
           });
           notificationStats.totalNewVideos += channelNewVideoCount;
         }
