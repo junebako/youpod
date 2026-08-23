@@ -19,3 +19,9 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # TypeScript 7系はネイティブコンパイラでts-nodeが動かない (JSコンパイラAPI廃止)
+      # ts-nodeを使い続ける限り5系に留める
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
