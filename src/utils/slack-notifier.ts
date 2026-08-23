@@ -3,12 +3,58 @@ import axios from 'axios';
 export interface NotificationStats {
   totalChannels: number;
   totalNewVideos: number;
+  totalFailedVideos: number;
   channelStats: Array<{
     label: string;
     newVideos: number;
     videoTitles?: string[]; // 新着動画のタイトル一覧
+    failedVideos?: number; // ダウンロードに失敗した動画の件数
+    failedReason?: string; // ダウンロード失敗の代表エラー
   }>;
   errors?: string[];
+}
+
+/**
+ * yt-dlpのエラーをSlack通知向けに短く要約する
+ */
+export function summarizeDownloadError(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const lines = rawMessage.split(/\r?\n/);
+  const meaningfulLines: string[] = [];
+  let inWarning = false;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) continue;
+
+    if (/^WARNING:/i.test(trimmedLine)) {
+      inWarning = true;
+      continue;
+    }
+
+    // WARNINGの複数行メッセージもまとめて除外する
+    if (inWarning && /^\s+/.test(line)) {
+      continue;
+    }
+
+    inWarning = false;
+    meaningfulLines.push(trimmedLine);
+  }
+
+  const errorLines = meaningfulLines.filter(line => /^ERROR:/.test(line));
+  const isCommandFailureLine = (line: string) =>
+    line.replace(/^Error:\s*/i, '').trimStart().startsWith('Command failed: yt-dlp');
+  let summary = errorLines.length > 0
+    ? errorLines[errorLines.length - 1].replace(/^ERROR:\s*/, '').trim()
+    : (meaningfulLines.find(line => !isCommandFailureLine(line)) || meaningfulLines[0] || '不明なエラー');
+
+  // yt-dlpの前置きは省略して、HTTPエラーなどの本体を残す
+  summary = summary
+    .replace(/^Error:\s*/i, '')
+    .replace(/^(?:unable to download(?: video data| video)?|failed to download(?: video data| video)?|error downloading video):\s*/i, '')
+    .trim();
+
+  return summary.length > 120 ? `${summary.slice(0, 117)}...` : summary;
 }
 
 export class SlackNotifier {
@@ -19,14 +65,12 @@ export class SlackNotifier {
   }
 
   async sendProcessingComplete(stats: NotificationStats): Promise<void> {
-    const { totalChannels, totalNewVideos, channelStats, errors } = stats;
+    const { totalChannels, totalNewVideos, totalFailedVideos, channelStats, errors } = stats;
 
-    let status = 'success';
     let emoji = '✅';
     let color = 'good';
 
-    if (errors && errors.length > 0) {
-      status = 'warning';
+    if (totalFailedVideos > 0 || (errors && errors.length > 0)) {
       emoji = '⚠️';
       color = 'warning';
     }
@@ -75,6 +119,25 @@ export class SlackNotifier {
       fields.push({
         title: '新着動画がなかったチャンネル',
         value: noNewVideosChannels.join(', '),
+        short: false
+      });
+    }
+
+    const failedVideoDetails = channelStats
+      .filter(channel => channel.failedVideos && channel.failedVideos > 0)
+      .map(channel => {
+        let detail = `• ${channel.label}: ${channel.failedVideos}件`;
+        if (channel.failedReason) {
+          detail += ` (${channel.failedReason})`;
+        }
+        return detail;
+      })
+      .join('\n');
+
+    if (failedVideoDetails) {
+      fields.push({
+        title: 'ダウンロード失敗',
+        value: failedVideoDetails,
         short: false
       });
     }

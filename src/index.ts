@@ -8,7 +8,7 @@ import { downloadVideo, DownloadOptions } from './utils/downloader';
 import { R2Uploader } from './utils/r2-uploader';
 import { S3Uploader } from './utils/s3-uploader';
 import { Logger } from './utils/logger';
-import { SlackNotifier, NotificationStats } from './utils/slack-notifier';
+import { SlackNotifier, NotificationStats, summarizeDownloadError } from './utils/slack-notifier';
 import { cleanAllChannels } from './utils/video-cleaner';
 
 interface AppOptions {
@@ -29,6 +29,7 @@ async function main() {
   const notificationStats: NotificationStats = {
     totalChannels: 0,
     totalNewVideos: 0,
+    totalFailedVideos: 0,
     channelStats: [],
     errors: []
   };
@@ -84,6 +85,8 @@ async function main() {
 
         let channelNewVideoCount = 0;
         const channelNewVideoTitles: string[] = [];
+        let channelFailedVideoCount = 0;
+        let channelFailedReason: string | undefined;
 
         try {
           // YouTubeフィードを取得
@@ -140,6 +143,10 @@ async function main() {
             Logger.log(`ダウンロード完了: ${path.basename(downloadedFile)}`);
           } catch (error) {
             Logger.error(`ダウンロード失敗: ${error}`);
+            channelFailedVideoCount++;
+            if (!channelFailedReason) {
+              channelFailedReason = summarizeDownloadError(error);
+            }
           }
         }
 
@@ -152,11 +159,14 @@ async function main() {
         }
 
         // 統計情報を記録
+        notificationStats.totalFailedVideos += channelFailedVideoCount;
         if (slackNotifier) {
           notificationStats.channelStats.push({
             label: channel.label,
             newVideos: channelNewVideoCount,
-            videoTitles: channelNewVideoTitles
+            videoTitles: channelNewVideoTitles,
+            failedVideos: channelFailedVideoCount,
+            failedReason: channelFailedReason
           });
           notificationStats.totalNewVideos += channelNewVideoCount;
         }
@@ -240,9 +250,10 @@ async function main() {
       await uploadToStorage(config, options);
     }
 
-    // Slack通知を送信（--allオプション時で、新着動画があったまたはエラーがあった場合のみ）
+    // Slack通知を送信（--allオプション時で、新着動画・ダウンロード失敗・エラーがあった場合のみ）
     if (slackNotifier && options.all) {
       const shouldNotify = notificationStats.totalNewVideos > 0 ||
+                          notificationStats.totalFailedVideos > 0 ||
                           (notificationStats.errors && notificationStats.errors.length > 0);
 
       if (shouldNotify) {
@@ -253,7 +264,7 @@ async function main() {
           Logger.error('Slack通知の送信に失敗しました:', error);
         }
       } else {
-        Logger.log('新着動画もエラーもないため、Slack通知をスキップしました');
+        Logger.log('新着動画もダウンロード失敗もエラーもないため、Slack通知をスキップしました');
       }
     }
 
