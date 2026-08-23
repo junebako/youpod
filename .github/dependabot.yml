@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      # 脆弱性修正はパッケージごとにバラけるとPRが増えすぎるのでまとめる
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      # 定期更新もpatch/minorは1本にまとめる。majorはグループ外に出して個別に見る
+      minor-and-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
