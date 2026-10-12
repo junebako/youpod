@@ -195,13 +195,14 @@ async function main() {
 
         if (entries.length > 0) {
           // SimpleHistoryEntryをHistoryEntryに変換
-          const historyEntries = entries.map(entry => {
+          // クリーンアップ済みのファイルはストレージにも無いので、手元に残っているものだけをフィードに載せる
+          const historyEntries = entries.filter(entry => fs.existsSync(entry.filePath)).map(entry => {
             return {
               channelLabel: entry.channelLabel || channel.label,
               videoId: entry.videoId,
               title: entry.title,
               filePath: entry.filePath,
-              fileSize: fs.existsSync(entry.filePath) ? fs.statSync(entry.filePath).size : 0,
+              fileSize: fs.statSync(entry.filePath).size,
               format: path.extname(entry.filePath).replace('.', ''),
               publishedAt: entry.publishDate,
               downloadedAt: typeof entry.downloadDate === 'string' ? entry.downloadDate : entry.downloadDate.toISOString(),
