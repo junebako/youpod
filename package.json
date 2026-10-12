@@ -18,18 +18,18 @@
     "mp4": "ts-node src/index.ts --download-only --format mp4"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudfront": "^3.1114.0",
-    "@aws-sdk/client-s3": "^3.1114.0",
-    "axios": "^1.19.0",
-    "fast-xml-parser": "^5.11.0",
-    "fs-extra": "^11.4.0",
-    "js-yaml": "^5.4.2",
+    "@aws-sdk/client-cloudfront": "^3.1148.0",
+    "@aws-sdk/client-s3": "^3.1148.0",
+    "axios": "^1.20.0",
+    "fast-xml-parser": "^5.11.2",
+    "fs-extra": "^11.4.1",
+    "js-yaml": "^5.4.3",
     "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.6.4",
     "ts-node": "^10.9.1",
     "typescript": "^5.9.3"
   }
