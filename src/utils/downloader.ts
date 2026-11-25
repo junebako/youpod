@@ -112,11 +112,24 @@ export async function downloadVideo(
     const audioBitrate = options.maxBitrate ? `${options.maxBitrate}K` : '128K';
     command += ` -x --audio-format mp3 --audio-quality ${audioBitrate}`;
   } else {
-    // フォーマット指定を柔軟化
-    command += ` -f "bestvideo[height<=${maxHeight}]+bestaudio/best[height<=${maxHeight}]/best" --merge-output-format mp4`;
+    // フォーマット指定
+    // Apple 機器で再生できるように、SDR の映像と AAC (m4a) の音声を優先する。
+    // HDR (10bit) の映像をそのまま libx264 に渡すと High 10 になり、再生できないことが多い
+    const sdrVideo = `bestvideo[height<=${maxHeight}][dynamic_range=SDR]`;
+    const anyVideo = `bestvideo[height<=${maxHeight}]`;
+    const formatSelector = [
+      `${sdrVideo}+bestaudio[ext=m4a]`,
+      `${sdrVideo}+bestaudio`,
+      `${anyVideo}+bestaudio[ext=m4a]`,
+      `${anyVideo}+bestaudio`,
+      `best[height<=${maxHeight}]`,
+      'best',
+    ].join('/');
+    command += ` -f "${formatSelector}" --merge-output-format mp4`;
 
     // ビットレート制限を追加
-    command += ` --postprocessor-args "ffmpeg:-c:v libx264 -b:v ${maxBitrate} -maxrate ${maxBitrate} -bufsize ${maxBitrate} -preset medium -movflags +faststart"`;
+    // -pix_fmt yuv420p で 8bit に揃え、H.264 High (High 10 ではなく) で書き出す
+    command += ` --postprocessor-args "ffmpeg:-c:v libx264 -pix_fmt yuv420p -b:v ${maxBitrate} -maxrate ${maxBitrate} -bufsize ${maxBitrate} -preset medium -movflags +faststart"`;
   }
 
   // ファイルサイズの上限を設定（オプション）
